@@ -2,17 +2,30 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 
 const AuthContext = createContext();
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // Load user from localStorage on component mount
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        localStorage.removeItem('user');
+      }
     }
+    setLoading(false);
   }, []);
 
   const login = async (email, password) => {
@@ -90,87 +103,90 @@ export const AuthProvider = ({ children }) => {
   };
 
   const changePassword = async (currentPassword, newPassword) => {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch('/api/auth/change-password', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        currentPassword,
-        newPassword
-      }),
-    });
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/auth/change-password', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword
+        }),
+      });
 
-    const data = await response.json();
-    return data;
+      const data = await response.json();
+      return data;
 
-  } catch (error) {
-    return { success: false, message: 'Failed to change password' };
-  }
-};
-
-const forgotPassword = async (email) => {
-  try {
-    // Use your backend URL (adjust port if different)
-    const response = await fetch('http://localhost:5000/api/auth/forgot-password', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email }),
-    });
-
-    const data = await response.json();
-    
-    if (!response.ok) {
-      // If response is not OK, use the message from backend or default
-      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+    } catch (error) {
+      return { success: false, message: 'Failed to change password' };
     }
-    
-    return data;
+  };
 
-  } catch (error) {
-    console.error('Forgot password error:', error);
-    return { 
-      success: false, 
-      message: error.message || 'Network error. Please check your connection and try again.' 
-    };
-  }
-};
+  const forgotPassword = async (email) => {
+    try {
+      // Use your backend URL (adjust port if different)
+      const response = await fetch('http://localhost:5000/api/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
 
-const resetPassword = async (token, newPassword) => {
-  try {
-    const response = await fetch(`/api/auth/reset-password/${token}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ newPassword }),
-    });
+      const data = await response.json();
+      
+      if (!response.ok) {
+        // If response is not OK, use the message from backend or default
+        throw new Error(data.message || `HTTP error! status: ${response.status}`);
+      }
+      
+      return data;
 
-    const data = await response.json();
-    return data;
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      return { 
+        success: false, 
+        message: error.message || 'Network error. Please check your connection and try again.' 
+      };
+    }
+  };
 
-  } catch (error) {
-    return { success: false, message: 'Failed to reset password' };
-  }
-};
+  const resetPassword = async (token, newPassword) => {
+    try {
+      const response = await fetch(`/api/auth/reset-password/${token}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ newPassword }),
+      });
+
+      const data = await response.json();
+      return data;
+
+    } catch (error) {
+      return { success: false, message: 'Failed to reset password' };
+    }
+  };
+
+  const value = {
+    user,
+    login,
+    register,
+    logout,
+    updateProfile,
+    changePassword,
+    forgotPassword,
+    resetPassword,
+    loading
+  };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      login, 
-      register, 
-      logout, 
-      updateProfile,
-      changePassword,
-    forgotPassword,
-    resetPassword
-    }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
