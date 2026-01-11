@@ -80,9 +80,6 @@ exports.createClassroom = async (req, res, next) => {
   }
 };
 
-// @desc    Update classroom
-// @route   PUT /api/classrooms/:id
-// @access  Private
 exports.updateClassroom = async (req, res, next) => {
   try {
     let classroom = await Classroom.findById(req.params.id);
@@ -108,9 +105,6 @@ exports.updateClassroom = async (req, res, next) => {
   }
 };
 
-// @desc    Delete classroom
-// @route   DELETE /api/classrooms/:id
-// @access  Private
 exports.deleteClassroom = async (req, res, next) => {
   try {
     const classroom = await Classroom.findById(req.params.id);
@@ -133,9 +127,6 @@ exports.deleteClassroom = async (req, res, next) => {
   }
 };
 
-// @desc    Get classroom utilization
-// @route   GET /api/classrooms/:id/utilization
-// @access  Private
 exports.getClassroomUtilization = async (req, res, next) => {
   try {
     const classroom = await Classroom.findById(req.params.id);
