@@ -710,4 +710,5 @@ exports.searchUsers = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+  
 };

@@ -1,45 +1,71 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
-const classroomSchema = new mongoose.Schema({
-  code: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true
+const classroomSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: [true, "Classroom name is required"],
+      unique: true,
+      trim: true,
+    },
+    building: {
+      type: String,
+      required: [true, "Building is required"],
+      enum: [
+        "IT Building",
+        "Main Academic Building",
+        "Science Building",
+        "Engineering Building",
+        "Humanities Block",
+        "Library Building",
+      ],
+    },
+    capacity: {
+      type: Number,
+      required: [true, "Capacity is required"],
+      min: 1,
+      max: 500,
+    },
+    type: {
+      type: String,
+      required: [true, "Classroom type is required"],
+      enum: [
+        "Lecture Hall",
+        "Lab",
+        "Seminar Room",
+        "Auditorium",
+        "Tutorial Room",
+      ],
+    },
+    equipment: [
+      {
+        type: String,
+        enum: [
+          "Projector",
+          "Smart Board",
+          "Computers",
+          "Sound System",
+          "Lab Equipment",
+          "Whiteboard",
+          "Video Conference",
+          "Air Conditioning",
+          "Network",
+          "WiFi",
+        ],
+      },
+    ],
+    availability: {
+      type: String,
+      enum: ["Available", "In Use", "Under Maintenance"],
+      default: "Available",
+    },
+    status: {
+      type: Boolean,
+      default: true,
+    },
   },
-  name: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  capacity: {
-    type: Number,
-    required: true,
-    min: 1
-  },
-  building: {
-    type: String,
-    required: true
-  },
-  equipment: [{
-    type: String
-  }],
-  status: {
-    type: String,
-    enum: ['Available', 'Unavailable', 'Maintenance'],
-    default: 'Available'
-  },
-  type: {
-    type: String,
-    enum: ['Lecture Hall', 'Seminar Room', 'Workshop', 'Lab', 'Computer Lab', 'Conference Room'],
-    required: true
-  },
-  department: {
-    type: String,
-    default: 'General'
-  }
-}, {
-  timestamps: true
-});
+  { timestamps: true }
+);
 
-module.exports = mongoose.model('Classroom', classroomSchema);
+const Classroom = mongoose.model("Classroom", classroomSchema);
+export default Classroom;

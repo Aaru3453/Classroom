@@ -1,131 +1,66 @@
-const Subject = require('../models/Subject');
+import Subject from "../models/Subject.js";
 
-// @desc    Get all subjects
-// @route   GET /api/subjects
-// @access  Private
-exports.getSubjects = async (req, res, next) => {
+export const getSubjects = async (req, res) => {
   try {
-    const { department, type, search } = req.query;
-    
-    let query = { isActive: true };
-    
-    if (department && department !== 'All Departments') {
-      query.department = department;
-    }
-    
-    if (type && type !== 'All Types') {
-      query.type = type;
-    }
-    
-    if (search) {
-      query.$or = [
-        { code: { $regex: search, $options: 'i' } },
-        { name: { $regex: search, $options: 'i' } }
-      ];
-    }
-
-    const subjects = await Subject.find(query).sort({ code: 1 });
-
+    const subjects = await Subject.find();
     res.status(200).json({
       success: true,
-      count: subjects.length,
-      data: subjects
+      data: subjects,
     });
   } catch (error) {
-    next(error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
-// @desc    Get single subject
-// @route   GET /api/subjects/:id
-// @access  Private
-exports.getSubject = async (req, res, next) => {
-  try {
-    const subject = await Subject.findById(req.params.id);
-
-    if (!subject) {
-      return res.status(404).json({
-        success: false,
-        message: 'Subject not found'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: subject
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Create subject
-// @route   POST /api/subjects
-// @access  Private
-exports.createSubject = async (req, res, next) => {
+export const createSubject = async (req, res) => {
   try {
     const subject = await Subject.create(req.body);
-
     res.status(201).json({
       success: true,
-      data: subject
+      data: subject,
     });
   } catch (error) {
-    next(error);
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
-// @desc    Update subject
-// @route   PUT /api/subjects/:id
-// @access  Private
-exports.updateSubject = async (req, res, next) => {
+export const updateSubject = async (req, res) => {
   try {
-    let subject = await Subject.findById(req.params.id);
-
-    if (!subject) {
-      return res.status(404).json({
-        success: false,
-        message: 'Subject not found'
-      });
-    }
-
-    subject = await Subject.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true
-    });
+    const subject = await Subject.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
 
     res.status(200).json({
       success: true,
-      data: subject
+      data: subject,
     });
   } catch (error) {
-    next(error);
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
-// @desc    Delete subject
-// @route   DELETE /api/subjects/:id
-// @access  Private
-exports.deleteSubject = async (req, res, next) => {
+export const deleteSubject = async (req, res) => {
   try {
-    const subject = await Subject.findById(req.params.id);
-
-    if (!subject) {
-      return res.status(404).json({
-        success: false,
-        message: 'Subject not found'
-      });
-    }
-
-    // Soft delete
-    subject.isActive = false;
-    await subject.save();
-
+    await Subject.findByIdAndDelete(req.params.id);
     res.status(200).json({
       success: true,
-      message: 'Subject deleted successfully'
+      message: "Subject deleted",
     });
   } catch (error) {
-    next(error);
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
   }
 };

@@ -1,31 +1,16 @@
-const express = require('express');
+import express from "express";
+import {
+  getSubjects,
+  createSubject,
+  updateSubject,
+  deleteSubject,
+} from "../controllers/subjectController.js";
+
 const router = express.Router();
 
-router.get('/', async (req, res) => {
-  try {
-    const subjects = [
-      {
-        _id: 1,
-        name: "DAA",
-        code: "DR2345",
-        department: "Civil Engineering",
-        credits: 4,
-        type: "Core",
-        description: "Design and Analysis of Algorithms"
-      }
-    ];
-    res.json(subjects);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+router.get("/", getSubjects);
+router.post("/", createSubject);
+router.put("/:id", updateSubject);
+router.delete("/:id", deleteSubject);
 
-router.post('/', async (req, res) => {
-  try {
-    res.json({ message: 'Subject created successfully', data: req.body });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-module.exports = router;
+export default router;

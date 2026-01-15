@@ -184,10 +184,6 @@ exports.addSubjectToSemester = async (req, res, next) => {
   }
 };
 
-
-// @desc    Forgot password
-// @route   POST /api/auth/forgot-password
-// @access  Public
 exports.forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;

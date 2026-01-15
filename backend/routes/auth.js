@@ -1,12 +1,22 @@
-const express = require('express');
+import express from "express";
+import {
+  register,
+  login,
+  getMe,
+  logout,
+  forgotPassword,
+} from "../controllers/authController.js";
+
+import { protect } from "../middleware/auth.js";
+
 const router = express.Router();
 
-router.post('/login', async (req, res) => {
-  try {
-    res.json({ message: 'Login successful', token: 'mock-token' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+router.post("/register", register);
+router.post("/login", login);
 
-module.exports = router;
+router.get("/me", protect, getMe);
+router.post("/logout", protect, logout);
+
+router.post("/forgot-password", forgotPassword);
+
+export default router;

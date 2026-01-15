@@ -1,20 +1,16 @@
-const express = require('express');
+import express from "express";
+import {
+  getTimetables,
+  createTimetable,
+  updateTimetable,
+  deleteTimetable,
+} from "../controllers/timetableController.js";
+
 const router = express.Router();
 
-router.get('/', async (req, res) => {
-  try {
-    res.json([]);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+router.get("/", getTimetables);
+router.post("/", createTimetable);
+router.put("/:id", updateTimetable);
+router.delete("/:id", deleteTimetable);
 
-router.post('/', async (req, res) => {
-  try {
-    res.json({ message: 'Timetable created successfully', data: req.body });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-module.exports = router;
+export default router;
