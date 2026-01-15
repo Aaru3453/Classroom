@@ -1,237 +1,249 @@
-import React, { useState } from 'react';
+// classroom/frontend/src/components/pages/Classroom.jsx
+import React, { useState, useEffect } from "react";
+import { classroomAPI } from '../../services/api';
 
 const Classroom = () => {
-  const [classrooms, setClassrooms] = useState([
-    {
-      id: 1,
-      code: "ADER2353",
-      name: "Workshop - A wing",
-      capacity: 20,
-      building: "A wing",
-      equipment: ["Projector"],
-      status: "Available",
-      type: "Workshop"
-    },
-    {
-      id: 2,
-      code: "A101",
-      name: "Lecture Hall - Main Academic Building",
-      capacity: 60,
-      building: "Main Academic Building",
-      equipment: ["Projector", "Whiteboard", "Sound System"],
-      status: "Available",
-      type: "Lecture Hall"
-    },
-    {
-      id: 3,
-      code: "B205",
-      name: "Seminar Room - Humanities Block",
-      capacity: 30,
-      building: "Humanities Block",
-      equipment: ["Projector", "Smart Board"],
-      status: "Available",
-      type: "Seminar Room"
-    }
-  ]);
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedBuilding, setSelectedBuilding] = useState('All Buildings');
-  const [selectedType, setSelectedType] = useState('All Room Types');
+  const [classrooms, setClassrooms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [editingClassroom, setEditingClassroom] = useState(null);
-  
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("All");
+  const [filterBuilding, setFilterBuilding] = useState("All");
+
   const [newClassroom, setNewClassroom] = useState({
-    code: '',
-    name: '',
-    capacity: '',
-    building: '',
-    type: '',
-    equipment: '',
-    status: true
+    name: "",
+    building: "",
+    capacity: "",
+    type: "Lecture Hall",
+    equipment: [],
+    availability: "Available"
   });
 
-  // Room types for dropdown
-  const roomTypes = [
-    'Lecture Hall',
-    'Seminar Room',
-    'Workshop',
-    'Lab',
-    'Computer Lab',
-    'Conference Room'
+  const equipmentOptions = ["Projector", "Smart Board", "Computers", "Sound System", "Lab Equipment", "Whiteboard", "Video Conference", "Air Conditioning", "Network"];
+  const buildingOptions = [
+    "IT Building",
+    "Main Academic Building",
+    "Science Building",
+    "Engineering Building",
+    "Humanities Block",
+    "Library Building"
   ];
 
-  // Get unique buildings for filters
-  const buildings = ['All Buildings', ...new Set(classrooms.map(room => room.building))];
+  const typeOptions = ["Lecture Hall", "Lab", "Seminar Room", "Auditorium", "Tutorial Room"];
 
-  // Filter classrooms
-  const filteredClassrooms = classrooms.filter(classroom => {
-    const matchesSearch = classroom.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         classroom.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesBuilding = selectedBuilding === 'All Buildings' || classroom.building === selectedBuilding;
-    const matchesType = selectedType === 'All Room Types' || classroom.type === selectedType;
-    
-    return matchesSearch && matchesBuilding && matchesType;
-  });
-
-  const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedBuilding('All Buildings');
-    setSelectedType('All Room Types');
+  // Fetch classrooms from API
+  const fetchClassrooms = async () => {
+    try {
+      setLoading(true);
+      const response = await classroomAPI.getAll();
+      setClassrooms(response.data.data);
+      setError(null);
+    } catch (err) {
+      setError('Failed to fetch classrooms. Please try again.');
+      console.error('Error fetching classrooms:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteClassroom = (id) => {
-    setClassrooms(classrooms.filter(room => room.id !== id));
+  useEffect(() => {
+    fetchClassrooms();
+  }, []);
+
+
+  const handleAddClassroom = async () => {
+    const payload = {
+      name: newClassroom.name.trim(),
+      building: newClassroom.building,
+      type: newClassroom.type,
+      availability: newClassroom.availability,
+      equipment: newClassroom.equipment || [],
+      capacity: Number(newClassroom.capacity),
+    };
+
+    if (Number.isNaN(payload.capacity)) {
+      alert("Capacity must be a valid number");
+      return;
+    }
+
+    try {
+      if (editingClassroom) {
+        await classroomAPI.update(editingClassroom._id, payload);
+      } else {
+        await classroomAPI.create(payload);
+      }
+
+      await fetchClassrooms();   // 🔥 THIS UPDATES UI
+
+      setShowAddModal(false);
+      setEditingClassroom(null);
+
+      setSearchTerm("");
+      setFilterType("All");
+      setFilterBuilding("All");
+
+      setNewClassroom({
+        name: "",
+        building: "",
+        capacity: "",
+        type: "Lecture Hall",
+        equipment: [],
+        availability: "Available",
+      });
+
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save classroom");
+    }
   };
 
-  // Edit classroom function
-  const handleEditClick = (classroom) => {
+
+
+  const handleDeleteClassroom = async (id) => {
+    if (window.confirm("Are you sure you want to delete this classroom?")) {
+      try {
+        await classroomAPI.delete(id);
+        await fetchClassrooms(); // Refresh the list
+      } catch (err) {
+        alert('Failed to delete classroom. Please try again.');
+        console.error('Error deleting classroom:', err);
+      }
+    }
+  };
+
+  const handleEditClassroom = (classroom) => {
+    if (!classroom) return;
+
     setEditingClassroom(classroom);
+
     setNewClassroom({
-      code: classroom.code,
-      name: classroom.name,
-      capacity: classroom.capacity.toString(),
-      building: classroom.building,
-      type: classroom.type,
-      equipment: classroom.equipment.join(', '),
-      status: classroom.status === 'Available'
+      name: classroom.name || "",
+      building: classroom.building || "",
+      capacity: classroom.capacity ? classroom.capacity.toString() : "",
+      type: classroom.type || "Lecture Hall",
+      equipment: classroom.equipment || [],
+      availability: classroom.availability || "Available",
     });
-    setShowEditModal(true);
+
+    setShowAddModal(true);
   };
 
-  // Update classroom function
-  const handleUpdateClassroom = () => {
-    if (!newClassroom.code || !newClassroom.capacity || !newClassroom.building || !newClassroom.type) {
-      alert('Please fill in all required fields');
-      return;
-    }
 
-    const updatedClassroom = {
-      ...editingClassroom,
-      code: newClassroom.code,
-      name: `${newClassroom.type} - ${newClassroom.building}`,
-      capacity: parseInt(newClassroom.capacity),
-      building: newClassroom.building,
-      equipment: newClassroom.equipment.split(',').map(item => item.trim()).filter(item => item),
-      status: newClassroom.status ? 'Available' : 'Unavailable',
-      type: newClassroom.type
-    };
-
-    setClassrooms(classrooms.map(room => 
-      room.id === editingClassroom.id ? updatedClassroom : room
-    ));
-    setShowEditModal(false);
-    setEditingClassroom(null);
-    setNewClassroom({
-      code: '',
-      name: '',
-      capacity: '',
-      building: '',
-      type: '',
-      equipment: '',
-      status: true
-    });
-  };
-
-  const handleAddClassroom = () => {
-    if (!newClassroom.code || !newClassroom.capacity || !newClassroom.building || !newClassroom.type) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    const classroom = {
-      id: classrooms.length + 1,
-      code: newClassroom.code,
-      name: `${newClassroom.type} - ${newClassroom.building}`,
-      capacity: parseInt(newClassroom.capacity),
-      building: newClassroom.building,
-      equipment: newClassroom.equipment.split(',').map(item => item.trim()).filter(item => item),
-      status: newClassroom.status ? 'Available' : 'Unavailable',
-      type: newClassroom.type
-    };
-
-    setClassrooms([...classrooms, classroom]);
-    setShowAddModal(false);
-    setNewClassroom({
-      code: '',
-      name: '',
-      capacity: '',
-      building: '',
-      type: '',
-      equipment: '',
-      status: true
-    });
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
+  const toggleEquipment = (equipment) => {
     setNewClassroom(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      equipment: prev.equipment.includes(equipment)
+        ? prev.equipment.filter(e => e !== equipment)
+        : [...prev.equipment, equipment]
     }));
   };
 
+  const getAvailabilityColor = (availability) => {
+    switch (availability) {
+      case "Available": return "bg-green-100 text-green-800";
+      case "In Use": return "bg-yellow-100 text-yellow-800";
+      case "Under Maintenance": return "bg-red-100 text-red-800";
+      default: return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const filteredClassrooms = classrooms.filter(classroom => {
+    const matchesSearch =
+      classroom.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      classroom.building.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesType =
+      filterType === "All" || classroom.type === filterType;
+
+    const matchesBuilding =
+      filterBuilding === "All" || classroom.building === filterBuilding;
+
+    return matchesSearch && matchesType && matchesBuilding;
+  });
+
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading classrooms...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+        <div className="text-center text-red-600">
+          <p>{error}</p>
+          <button
+            onClick={fetchClassrooms}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Main Content with extra top padding to avoid navbar overlap */}
-      <div className="pt-24 p-4 md:p-6"> {/* <-- Changed from pt-16 to pt-24 */}
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
         {/* Header Section */}
         <div className="pt-24 text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-800 mb-2">
-               Classroom Management
-            </h1>
-            <p className="text-lg text-gray-600">
-                Manage classroom information and availability
-            </p>
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">
+            Classrooms
+          </h1>
+          <p className="text-lg text-gray-600">
+            Manage classrooms, labs, and facilities
+          </p>
         </div>
-        
 
-
-        {/* Search and Filters Section */}
-        <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-6">
+        {/* Search and Filter Section */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="md:col-span-2">
-              <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
-                Search classrooms...
-              </label>
-              <input
-                type="text"
-                id="search"
-                placeholder="Search by code or name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <i className="fas fa-search text-gray-400"></i>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search classrooms..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
             </div>
 
             <div>
-              <label htmlFor="building" className="block text-sm font-medium text-gray-700 mb-1">
-                Building
-              </label>
               <select
-                id="building"
-                value={selectedBuilding}
-                onChange={(e) => setSelectedBuilding(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               >
-                {buildings.map(building => (
-                  <option key={building} value={building}>{building}</option>
+                <option value="All">All Types</option>
+                {typeOptions.map(type => (
+                  <option key={type} value={type}>{type}</option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
-                Room Type
-              </label>
               <select
-                id="type"
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={filterBuilding}
+                onChange={(e) => setFilterBuilding(e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               >
-                {['All Room Types', ...roomTypes].map(type => (
-                  <option key={type} value={type}>{type}</option>
+                <option value="All">All Buildings</option>
+                {buildingOptions.map(building => (
+                  <option key={building} value={building}>{building}</option>
                 ))}
               </select>
             </div>
@@ -239,335 +251,219 @@ const Classroom = () => {
 
           <div className="mt-4 flex justify-end">
             <button
-              onClick={clearFilters}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onClick={() => {
+                setEditingClassroom(null);
+                setNewClassroom({
+                  name: "",
+                  building: "",
+                  capacity: "",
+                  type: "Lecture Hall",
+                  equipment: [],
+                  availability: "Available"
+                });
+                setShowAddModal(true);
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center"
             >
-              Clear Filters
+              <i className="fas fa-plus mr-2"></i>
+              Add Classroom
             </button>
           </div>
         </div>
 
-        {/* Classroom Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredClassrooms.map((classroom) => (
-            <div key={classroom.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4">
-                <div className="flex justify-between items-start">
-                  <h3 className="text-xl font-bold text-white">{classroom.code}</h3>
-                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                    classroom.status === 'Available' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {classroom.status}
+        {/* Classrooms Grid */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredClassrooms.map(classroom => (
+            <div key={`${classroom._id}-${classroom.updatedAt}`} className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow">
+              <div className="p-6">
+                {/* Classroom Header */}
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900">{classroom.name}</h3>
+                    <p className="text-gray-600 text-sm">{classroom.building}</p>
+                  </div>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getAvailabilityColor(classroom.availability)}`}>
+                    {classroom.availability}
                   </span>
                 </div>
-                <p className="text-blue-100 mt-1">{classroom.name}</p>
-              </div>
 
-              <div className="p-4">
-                <div className="space-y-3">
-                  <div className="flex items-center">
-                    <i className="fas fa-users text-gray-400 w-5"></i>
-                    <span className="ml-2 text-gray-700">
-                      <strong>Capacity:</strong> {classroom.capacity} students
-                    </span>
+                {/* Classroom Details */}
+                <div className="space-y-3 mb-4">
+                  <div className="flex items-center text-gray-700">
+                    <i className="fas fa-users mr-3 text-gray-400"></i>
+                    <span>Capacity: <strong>{classroom.capacity} students</strong></span>
+                  </div>
+                  <div className="flex items-center text-gray-700">
+                    <i className="fas fa-building mr-3 text-gray-400"></i>
+                    <span>Type: <strong>{classroom.type}</strong></span>
                   </div>
 
-                  <div className="flex items-center">
-                    <i className="fas fa-building text-gray-400 w-5"></i>
-                    <span className="ml-2 text-gray-700">{classroom.building}</span>
-                  </div>
-
-                  <div className="flex items-start">
-                    <i className="fas fa-tools text-gray-400 w-5 mt-1"></i>
-                    <div className="ml-2">
-                      <strong className="text-gray-700">Equipment:</strong>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {classroom.equipment.map((item, index) => (
-                          <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                            {item}
-                          </span>
-                        ))}
-                      </div>
+                  {/* Equipment */}
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-1">Equipment:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {classroom.equipment.map(item => (
+                        <span key={item} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                          {item}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
-                  <button 
-                    onClick={() => handleEditClick(classroom)}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                {/* Action Buttons */}
+                <div className="flex space-x-2 pt-4 border-t border-gray-100 relative z-10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      console.log("EDIT CLICKED:", classroom);
+                      handleEditClassroom(classroom);
+                    }}
+                    className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 text-sm font-medium cursor-pointer"
                   >
                     <i className="fas fa-edit mr-2"></i>
                     Edit
                   </button>
-                  <button 
-                    onClick={() => deleteClassroom(classroom.id)}
-                    className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteClassroom(classroom._id)}
+                    className="flex-1 px-3 py-2 bg-red-50 text-red-600 rounded-md hover:bg-red-100 text-sm font-medium cursor-pointer"
                   >
                     <i className="fas fa-trash mr-2"></i>
                     Delete
                   </button>
                 </div>
+
               </div>
             </div>
           ))}
         </div>
 
-        {/* Empty State */}
-        {filteredClassrooms.length === 0 && (
-          <div className="text-center py-12">
-            <i className="fas fa-door-open text-6xl text-gray-300 mb-4"></i>
-            <h3 className="text-xl font-semibold text-gray-600">No classrooms found</h3>
-            <p className="text-gray-500">Try adjusting your search or filters</p>
+        {/* Add/Edit Classroom Modal */}
+        {showAddModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  {editingClassroom ? "Edit Classroom" : "Add New Classroom"}
+                </h3>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Classroom Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={newClassroom.name}
+                      onChange={(e) => setNewClassroom({ ...newClassroom, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g., Lecture Hall A101"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Building *
+                    </label>
+                    <select
+                      value={newClassroom.building}
+                      onChange={(e) => setNewClassroom({ ...newClassroom, building: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select Building</option>
+                      {buildingOptions.map(building => (
+                        <option key={building} value={building}>{building}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Capacity *
+                    </label>
+                    <input
+                      type="number"
+                      value={newClassroom.capacity}
+                      onChange={(e) => setNewClassroom({ ...newClassroom, capacity: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g., 50"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Type *
+                    </label>
+                    <select
+                      value={newClassroom.type}
+                      onChange={(e) => setNewClassroom({ ...newClassroom, type: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {typeOptions.map(type => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Availability
+                    </label>
+                    <select
+                      value={newClassroom.availability}
+                      onChange={(e) => setNewClassroom({ ...newClassroom, availability: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="Available">Available</option>
+                      <option value="In Use">In Use</option>
+                      <option value="Under Maintenance">Under Maintenance</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Equipment
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 border border-gray-300 rounded-md p-3 max-h-32 overflow-y-auto">
+                      {equipmentOptions.map(item => (
+                        <label key={item} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={newClassroom.equipment.includes(item)}
+                            onChange={() => toggleEquipment(item)}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700">{item}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex space-x-3 mt-6 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setEditingClassroom(null);
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    onClick={handleAddClassroom}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  >
+                    {editingClassroom ? "Update" : "Add Classroom"}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
-      </div>
-
-      {/* Add New Classroom Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-t-lg">
-              <h2 className="text-2xl font-bold text-white">Add New Classroom</h2>
-              <p className="text-blue-100 mt-1">Enter classroom details</p>
-            </div>
-
-            <div className="p-6">
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Room Number *
-                    </label>
-                    <input
-                      type="text"
-                      name="code"
-                      value={newClassroom.code}
-                      onChange={handleInputChange}
-                      placeholder="e.g., A101, B205"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Capacity *
-                    </label>
-                    <input
-                      type="number"
-                      name="capacity"
-                      value={newClassroom.capacity}
-                      onChange={handleInputChange}
-                      placeholder="e.g., 30, 50"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Building *
-                    </label>
-                    <input
-                      type="text"
-                      name="building"
-                      value={newClassroom.building}
-                      onChange={handleInputChange}
-                      placeholder="e.g., Main Building, Science Block"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Room Type *
-                    </label>
-                    <select
-                      name="type"
-                      value={newClassroom.type}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select room type</option>
-                      {roomTypes.map(type => (
-                        <option key={type} value={type}>{type}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Available Equipment
-                  </label>
-                  <input
-                    type="text"
-                    name="equipment"
-                    value={newClassroom.equipment}
-                    onChange={handleInputChange}
-                    placeholder="e.g., Projector, Whiteboard, Audio System, Computers"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Separate equipment with commas</p>
-                </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="status"
-                    checked={newClassroom.status}
-                    onChange={handleInputChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 block text-sm text-gray-700">
-                    Available for booking
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex justify-end space-x-3">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddClassroom}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                Add Classroom
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Classroom Modal */}
-      {showEditModal && editingClassroom && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-t-lg">
-              <h2 className="text-2xl font-bold text-white">Edit Classroom</h2>
-              <p className="text-blue-100 mt-1">Update classroom information</p>
-            </div>
-
-            <div className="p-6">
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Room Number *
-                    </label>
-                    <input
-                      type="text"
-                      name="code"
-                      value={newClassroom.code}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Capacity *
-                    </label>
-                    <input
-                      type="number"
-                      name="capacity"
-                      value={newClassroom.capacity}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Building *
-                    </label>
-                    <input
-                      type="text"
-                      name="building"
-                      value={newClassroom.building}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Room Type *
-                    </label>
-                    <select
-                      name="type"
-                      value={newClassroom.type}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select room type</option>
-                      {roomTypes.map(type => (
-                        <option key={type} value={type}>{type}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Available Equipment
-                  </label>
-                  <input
-                    type="text"
-                    name="equipment"
-                    value={newClassroom.equipment}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="status"
-                    checked={newClassroom.status}
-                    onChange={handleInputChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 block text-sm text-gray-700">
-                    Available for booking
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex justify-end space-x-3">
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUpdateClassroom}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                Update Classroom
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add New Classroom Button */}
-      <div className="fixed bottom-6 right-6">
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-        >
-          <i className="fas fa-plus text-xl"></i>
-        </button>
       </div>
     </div>
   );

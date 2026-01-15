@@ -2,11 +2,11 @@ import api from './api';
 
 export const timetableService = {
   // Timetable generation
-  generateTimetable: (data) => api.post('/timetable/generate', data),
-  getTimetables: () => api.get('/timetable'),
-  getTimetableById: (id) => api.get(`/timetable/${id}`),
-  updateTimetable: (id, data) => api.put(`/timetable/${id}`, data),
-  deleteTimetable: (id) => api.delete(`/timetable/${id}`),
+  generateTimetable: (data) => api.post('/timetables/generate', data),
+  getTimetables: () => api.get('/timetables'),
+  getTimetableById: (id) => api.get(`/timetables/${id}`),
+  updateTimetable: (id, data) => api.put(`/timetables/${id}`, data),
+  deleteTimetable: (id) => api.delete(`/timetables/${id}`),
 
   // Faculty constraints
   getFacultyConstraints: () => api.get('/faculty/constraints'),

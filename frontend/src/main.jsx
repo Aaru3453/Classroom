@@ -1,18 +1,24 @@
-import { createRoot } from 'react-dom/client';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import App from './App.jsx';
-import './index.css';
-import { AuthProvider } from './context/AuthContext.jsx';
+import { createRoot } from "react-dom/client";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import App from "./App.jsx";
+import "./index.css";
+import { AuthProvider } from "./context/AuthContext.jsx";
 
-const router = createBrowserRouter([
+const router = createBrowserRouter(
+  [
+    {
+      path: "/*",
+      element: <App />,
+    },
+  ],
   {
-    path: "/*",
-    element: <App />,
+    future: {
+      v7_startTransition: true,
+    },
   }
-]);
+);
 
-// Create root without StrictMode temporarily
-const rootElement = document.getElementById('root');
+const rootElement = document.getElementById("root");
 const root = createRoot(rootElement);
 
 root.render(
@@ -20,4 +26,3 @@ root.render(
     <RouterProvider router={router} />
   </AuthProvider>
 );
-

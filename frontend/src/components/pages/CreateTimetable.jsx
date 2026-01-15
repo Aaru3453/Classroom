@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { timetableAPI } from "../../services/api";
+
 const CreateTimetable = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Statuses');
@@ -7,82 +9,49 @@ const CreateTimetable = () => {
   const [showGridView, setShowGridView] = useState(false);
   const [selectedTimetable, setSelectedTimetable] = useState(null);
   const [editingTimetable, setEditingTimetable] = useState(null);
-
-  // Sample timetable data with state
-  const [timetableData, setTimetableData] = useState([
-    {
-      id: 1,
-      title: 'CS-Summer Timetable-2025',
-      status: 'Draft',
-      department: 'Computer Science - Afternoon',
-      generatedDate: '22/9/2025',
-      notes: 'Generated with 5 subjects, 5 faculty members, 5 classrooms, and 2 batches.',
-      hasDownload: false,
-      gridData: {
-        days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-        timeSlots: ['09:00-10:00', '10:00-11:00', '11:00-12:00', '12:00-13:00', '13:00-14:00', '14:00-15:00'],
-        schedule: [
-          ['Math - Room A101', 'Physics - Room B202', 'Break', 'Chemistry - Lab C', 'Biology - Room A101', 'Computer - Lab D'],
-          ['Physics - Room B202', 'Chemistry - Lab C', 'Break', 'Math - Room A101', 'Computer - Lab D', 'Biology - Room A101'],
-          ['Chemistry - Lab C', 'Math - Room A101', 'Break', 'Physics - Room B202', 'Biology - Room A101', 'Computer - Lab D'],
-          ['Biology - Room A101', 'Computer - Lab D', 'Break', 'Math - Room A101', 'Physics - Room B202', 'Chemistry - Lab C'],
-          ['Computer - Lab D', 'Biology - Room A101', 'Break', 'Physics - Room B202', 'Chemistry - Lab C', 'Math - Room A101']
-        ]
-      }
-    },
-    {
-      id: 2,
-      title: 'Fall 2024 CS Morning Shift',
-      status: 'Approved',
-      department: 'Computer Science - Morning',
-      generatedDate: '15/8/2024',
-      notes: 'Approved by Head of Department. No clashes found.',
-      hasDownload: true,
-      gridData: {
-        days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-        timeSlots: ['08:00-09:00', '09:00-10:00', '10:00-11:00', '11:00-12:00', '12:00-13:00', '13:00-14:00'],
-        schedule: [
-          ['Web Dev - Lab A', 'Database - Room B101', 'Algorithms - Room C202', 'Break', 'OS - Room D303', 'Networking - Lab E'],
-          ['Database - Room B101', 'Algorithms - Room C202', 'Web Dev - Lab A', 'Break', 'Networking - Lab E', 'OS - Room D303'],
-          ['Algorithms - Room C202', 'Web Dev - Lab A', 'Database - Room B101', 'Break', 'OS - Room D303', 'Networking - Lab E'],
-          ['OS - Room D303', 'Networking - Lab E', 'Web Dev - Lab A', 'Break', 'Database - Room B101', 'Algorithms - Room C202'],
-          ['Networking - Lab E', 'OS - Room D303', 'Algorithms - Room C202', 'Break', 'Web Dev - Lab A', 'Database - Room B101']
-        ]
-      }
-    },
-    {
-      id: 3,
-      title: 'Spring 2025 EE Afternoon Shift',
-      status: 'Pending Review',
-      department: 'Electrical Engineering - Afternoon',
-      generatedDate: '1/12/2024',
-      notes: 'Waiting for Dean\'s final review. Minor faculty availability conflict noted.',
-      hasDownload: true,
-      gridData: {
-        days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-        timeSlots: ['13:00-14:00', '14:00-15:00', '15:00-16:00', '16:00-17:00', '17:00-18:00', '18:00-19:00'],
-        schedule: [
-          ['Circuit Theory - Lab F', 'Electronics - Room G101', 'Power Systems - Room H202', 'Break', 'Control Systems - Lab I', 'Signals - Room J303'],
-          ['Electronics - Room G101', 'Power Systems - Room H202', 'Circuit Theory - Lab F', 'Break', 'Signals - Room J303', 'Control Systems - Lab I'],
-          ['Power Systems - Room H202', 'Circuit Theory - Lab F', 'Electronics - Room G101', 'Break', 'Control Systems - Lab I', 'Signals - Room J303'],
-          ['Control Systems - Lab I', 'Signals - Room J303', 'Circuit Theory - Lab F', 'Break', 'Electronics - Room G101', 'Power Systems - Room H202'],
-          ['Signals - Room J303', 'Control Systems - Lab I', 'Power Systems - Room H202', 'Break', 'Circuit Theory - Lab F', 'Electronics - Room G101']
-        ]
-      }
-    }
-  ]);
+  const [timetableData, setTimetableData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const statusOptions = ['All Statuses', 'Draft', 'Approved', 'Pending Review'];
   const departmentOptions = ['All Departments', 'Computer Science', 'Electrical Engineering', 'Mechanical Engineering'];
 
+  // Fetch timetables on component mount and when filters change
+  const fetchTimetables = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const params = {};
+      if (searchTerm && searchTerm !== '') params.search = searchTerm;
+      if (statusFilter && statusFilter !== 'All Statuses') params.status = statusFilter;
+      if (departmentFilter && departmentFilter !== 'All Departments') params.department = departmentFilter;
+      
+      const res = await timetableAPI.getAll(params);
+      setTimetableData(res.data.data || res.data || []);
+    } catch (err) {
+      console.error("Failed to fetch timetables", err);
+      setError('Failed to load timetables. Please try again.');
+      setTimetableData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTimetables();
+  }, []);
+
   // Filter timetables based on search and filters
   const filteredTimetables = timetableData.filter(timetable => {
-    const matchesSearch = timetable.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         timetable.department.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = searchTerm === '' || 
+      (timetable.title && timetable.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (timetable.department && timetable.department.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    const matchesStatus = statusFilter === 'All Statuses' || timetable.status === statusFilter;
+    const matchesStatus = statusFilter === 'All Statuses' || 
+      timetable.status === statusFilter;
     const matchesDepartment = departmentFilter === 'All Departments' || 
-                             timetable.department.includes(departmentFilter);
+      (timetable.department && timetable.department.includes(departmentFilter));
     
     return matchesSearch && matchesStatus && matchesDepartment;
   });
@@ -91,6 +60,7 @@ const CreateTimetable = () => {
     setSearchTerm('');
     setStatusFilter('All Statuses');
     setDepartmentFilter('All Departments');
+    fetchTimetables(); // Refresh with cleared filters
   };
 
   const getStatusColor = (status) => {
@@ -118,16 +88,25 @@ const CreateTimetable = () => {
   };
 
   // Handle downloading timetable as PDF
-  const handleDownloadPDF = (timetable) => {
-    // In a real application, you would generate a PDF here
-    // For this example, we'll simulate a download
-    const element = document.createElement("a");
-    const file = new Blob([`Timetable: ${timetable.title}\nDepartment: ${timetable.department}\nStatus: ${timetable.status}\nGenerated: ${timetable.generatedDate}\n\nThis is a simulated PDF download. In a real application, this would be the actual timetable grid.`], { type: 'application/pdf' });
-    element.href = URL.createObjectURL(file);
-    element.download = `${timetable.title.replace(/\s+/g, '_')}.pdf`;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
+  const handleDownloadPDF = async (timetable) => {
+    try {
+      // Call API to generate/download PDF
+      const response = await timetableAPI.downloadPDF(timetable._id);
+      
+      // Create a blob from the response
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${timetable.title.replace(/\s+/g, '_')}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error downloading PDF:', err);
+      alert('Failed to download timetable. Please try again.');
+    }
   };
 
   // Handle editing a timetable
@@ -137,55 +116,79 @@ const CreateTimetable = () => {
   };
 
   // Handle deleting a timetable
-  const handleDeleteTimetable = (timetableId) => {
+  const handleDeleteTimetable = async (timetableId) => {
     if (window.confirm('Are you sure you want to delete this timetable? This action cannot be undone.')) {
-      setTimetableData(prevData => prevData.filter(t => t.id !== timetableId));
+      try {
+        await timetableAPI.delete(timetableId);
+        await fetchTimetables(); // Refresh the list
+      } catch (err) {
+        console.error('Error deleting timetable:', err);
+        alert('Failed to delete timetable. Please try again.');
+      }
     }
   };
 
   // Handle saving edited timetable
-  const handleSaveTimetable = (updatedTimetable) => {
-    if (editingTimetable) {
-      // Update existing timetable
-      setTimetableData(prevData => 
-        prevData.map(t => t.id === editingTimetable.id ? { ...t, ...updatedTimetable } : t)
-      );
+  const handleSaveTimetable = async (updatedTimetable) => {
+    try {
+      if (editingTimetable) {
+        // Update existing timetable
+        await timetableAPI.update(editingTimetable._id, updatedTimetable);
+      } else {
+        // Add new timetable
+        await timetableAPI.create(updatedTimetable);
+      }
+      
+      await fetchTimetables(); // Refresh the list
+      setShowGenerateModal(false);
       setEditingTimetable(null);
-    } else {
-      // Add new timetable
-      const newTimetable = {
-        id: Date.now(),
-        ...updatedTimetable,
-        hasDownload: false,
-        gridData: {
-          days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-          timeSlots: ['09:00-10:00', '10:00-11:00', '11:00-12:00', '12:00-13:00', '13:00-14:00', '14:00-15:00'],
-          schedule: [
-            ['Subject 1 - Room A', 'Subject 2 - Room B', 'Break', 'Subject 3 - Lab C', 'Subject 4 - Room D', 'Subject 5 - Lab E'],
-            ['Subject 2 - Room B', 'Subject 3 - Lab C', 'Break', 'Subject 1 - Room A', 'Subject 5 - Lab E', 'Subject 4 - Room D'],
-            ['Subject 3 - Lab C', 'Subject 1 - Room A', 'Break', 'Subject 2 - Room B', 'Subject 4 - Room D', 'Subject 5 - Lab E'],
-            ['Subject 4 - Room D', 'Subject 5 - Lab E', 'Break', 'Subject 1 - Room A', 'Subject 2 - Room B', 'Subject 3 - Lab C'],
-            ['Subject 5 - Lab E', 'Subject 4 - Room D', 'Break', 'Subject 2 - Room B', 'Subject 3 - Lab C', 'Subject 1 - Room A']
-          ]
-        }
-      };
-      setTimetableData(prevData => [...prevData, newTimetable]);
+    } catch (err) {
+      console.error('Error saving timetable:', err);
+      alert('Failed to save timetable. Please try again.');
     }
-    setShowGenerateModal(false);
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading timetables...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
+        <div className="text-center text-red-600">
+          <p>{error}</p>
+          <button 
+            onClick={fetchTimetables}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         
         {/* Header Section */}
-         <div className="pt-24 text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-800 mb-2">
-               Timetables
-            </h1>
-            <p className="text-lg text-gray-600">
-                Manage and generate academic schedules
-            </p>
+        <div className="pt-24 text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">
+            Timetables
+          </h1>
+          <p className="text-lg text-gray-600">
+            Manage and generate academic schedules
+          </p>
         </div>
 
         {/* Search and Filters Section */}
@@ -201,6 +204,7 @@ const CreateTimetable = () => {
                   placeholder="Search timetables..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && fetchTimetables()}
                   className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -232,12 +236,21 @@ const CreateTimetable = () => {
           </div>
 
           <div className="mt-4 flex justify-between items-center">
-            <button 
-              onClick={handleClearFilters}
-              className="px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Clear Filters
-            </button>
+            <div className="flex gap-2">
+              <button 
+                onClick={handleClearFilters}
+                className="px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                Clear Filters
+              </button>
+              <button 
+                onClick={fetchTimetables}
+                className="px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <i className="fas fa-sync-alt mr-2"></i>
+                Refresh
+              </button>
+            </div>
             
             <button 
               onClick={() => {
@@ -264,7 +277,7 @@ const CreateTimetable = () => {
             </div>
           ) : (
             filteredTimetables.map(timetable => (
-              <div key={timetable.id} className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
+              <div key={timetable._id || timetable.id} className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
                 <div className="p-6">
                   {/* Header Section */}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
@@ -285,20 +298,22 @@ const CreateTimetable = () => {
                     </p>
                     <p className="text-gray-500 text-sm flex items-center mt-1">
                       <i className="fas fa-calendar-alt mr-2"></i>
-                      Generated: {timetable.generatedDate}
+                      {timetable.generatedDate ? `Generated: ${timetable.generatedDate}` : 'No date specified'}
                     </p>
                   </div>
 
                   {/* Notes */}
-                  <div className="mb-4 p-3 bg-blue-50 rounded-md">
-                    <p className="text-gray-700 text-sm">
-                      <strong className="flex items-center">
-                        <i className="fas fa-sticky-note mr-2"></i>
-                        Notes:
-                      </strong> 
-                      <span className="ml-6">{timetable.notes}</span>
-                    </p>
-                  </div>
+                  {timetable.notes && (
+                    <div className="mb-4 p-3 bg-blue-50 rounded-md">
+                      <p className="text-gray-700 text-sm">
+                        <strong className="flex items-center">
+                          <i className="fas fa-sticky-note mr-2"></i>
+                          Notes:
+                        </strong> 
+                        <span className="ml-6">{timetable.notes}</span>
+                      </p>
+                    </div>
+                  )}
 
                   {/* Action Buttons */}
                   <div className="flex flex-wrap gap-3">
@@ -329,7 +344,7 @@ const CreateTimetable = () => {
                     </button>
                     
                     <button 
-                      onClick={() => handleDeleteTimetable(timetable.id)}
+                      onClick={() => handleDeleteTimetable(timetable._id || timetable.id)}
                       className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                     >
                       <i className="fas fa-trash mr-2"></i>
@@ -369,15 +384,15 @@ const CreateTimetable = () => {
   );
 };
 
-// Generate Timetable Modal Component with proper layout
+// Generate Timetable Modal Component with API integration
 const GenerateTimetableModal = ({ onClose, onSave, editingTimetable }) => {
   const [currentStep, setCurrentStep] = useState('basic-info');
   const [timetableInfo, setTimetableInfo] = useState(editingTimetable ? {
-    title: editingTimetable.title,
-    department: editingTimetable.department,
-    status: editingTimetable.status,
-    notes: editingTimetable.notes,
-    generatedDate: editingTimetable.generatedDate
+    title: editingTimetable.title || '',
+    department: editingTimetable.department || '',
+    status: editingTimetable.status || 'Draft',
+    notes: editingTimetable.notes || '',
+    generatedDate: editingTimetable.generatedDate || new Date().toLocaleDateString()
   } : {
     title: '',
     department: '',
@@ -390,6 +405,13 @@ const GenerateTimetableModal = ({ onClose, onSave, editingTimetable }) => {
   const [selectedClassrooms, setSelectedClassrooms] = useState([]);
   const [selectedFaculty, setSelectedFaculty] = useState([]);
   const [selectedBatches, setSelectedBatches] = useState([]);
+  const [loadingResources, setLoadingResources] = useState(false);
+  const [resourcesError, setResourcesError] = useState(null);
+
+  const [subjectsData, setSubjectsData] = useState([]);
+  const [facultyData, setFacultyData] = useState([]);
+  const [classroomsData, setClassroomsData] = useState([]);
+  const [batchesData, setBatchesData] = useState([]);
 
   const [preferences, setPreferences] = useState({
     maxHoursPerDay: 6,
@@ -408,31 +430,39 @@ const GenerateTimetableModal = ({ onClose, onSave, editingTimetable }) => {
 
   const steps = ['basic-info', 'resources', 'preferences', 'constraints'];
 
-  // Sample data for resources
-  const subjectsData = [
-    { id: 1, name: 'Introduction to Psychology', code: 'PS101', department: 'Psychology', credits: 3 },
-    { id: 2, name: 'Web Development Fundamentals', code: 'CS310', department: 'Computer Science', credits: 3 },
-    { id: 3, name: 'Environmental Science', code: 'ES101', department: 'Environmental Studies', credits: 3 },
-    { id: 4, name: 'Art History: Renaissance to Modern', code: 'AH205', department: 'Fine Arts', credits: 3 }
-  ];
+  // Fetch resources data
+  useEffect(() => {
+    if (currentStep === 'resources' && subjectsData.length === 0) {
+      fetchResources();
+    }
+  }, [currentStep]);
 
-  const facultyData = [
-    { id: 1, name: 'Prof. David Lee', department: 'Electrical Engineering', subjects: ['Circuit Design', 'Power Systems', 'Digital Signal Processing'] },
-    { id: 2, name: 'Dr. Maria Garcia', department: 'Mathematics', subjects: ['Calculus', 'Linear Algebra', 'Differential Equations'] },
-    { id: 3, name: 'Prof. John Smith', department: 'Physics', subjects: ['Quantum Mechanics', 'Thermodynamics', 'Astrophysics'] },
-    { id: 4, name: 'Dr. Emily White', department: 'Chemistry', subjects: ['Organic Chemistry', 'Biochemistry', 'Analytical Chemistry'] }
-  ];
-
-  const classroomsData = [
-    { id: 1, name: 'Workshop - A wing', code: 'ADER2353', capacity: 20, building: 'A wing' },
-    { id: 2, name: 'Lecture Hall - Main Academic Building', code: 'A101', capacity: 60, building: 'Main Academic Building' },
-    { id: 3, name: 'Seminar Room - Humanities Block', code: 'B205', capacity: 30, building: 'Humanities Block' }
-  ];
-
-  const batchesData = [
-    { id: 1, name: 'Computer Science 2024', code: 'CS2024', department: 'Computer Science' },
-    { id: 2, name: 'Electrical Engineering 2024', code: 'EE2024', department: 'Electrical Engineering' }
-  ];
+  const fetchResources = async () => {
+    try {
+      setLoadingResources(true);
+      setResourcesError(null);
+      
+      // Fetch all resources concurrently
+      const [subjectsRes, facultyRes, classroomsRes, batchesRes] = await Promise.all([
+        // You'll need to create these API endpoints or use existing ones
+        // For now, we'll use empty arrays as placeholders
+        Promise.resolve({ data: [] }),
+        Promise.resolve({ data: [] }),
+        Promise.resolve({ data: [] }),
+        Promise.resolve({ data: [] })
+      ]);
+      
+      setSubjectsData(subjectsRes.data || []);
+      setFacultyData(facultyRes.data || []);
+      setClassroomsData(classroomsRes.data || []);
+      setBatchesData(batchesRes.data || []);
+    } catch (err) {
+      console.error('Error fetching resources:', err);
+      setResourcesError('Failed to load resources. Please try again.');
+    } finally {
+      setLoadingResources(false);
+    }
+  };
 
   const handleInputChange = (field, value) => {
     setTimetableInfo(prev => ({
@@ -501,7 +531,18 @@ const GenerateTimetableModal = ({ onClose, onSave, editingTimetable }) => {
   };
 
   const handleSave = () => {
-    onSave(timetableInfo);
+    // Prepare data for API
+    const timetableData = {
+      ...timetableInfo,
+      preferences,
+      constraints,
+      selectedSubjects,
+      selectedClassrooms,
+      selectedFaculty,
+      selectedBatches
+    };
+    
+    onSave(timetableData);
   };
 
   const getSelectedCount = (type) => {
@@ -568,17 +609,19 @@ const GenerateTimetableModal = ({ onClose, onSave, editingTimetable }) => {
                     onChange={(e) => handleInputChange('title', e.target.value)}
                     placeholder="e.g., CS Department Fall 2024"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
                   />
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Department
+                    Department *
                   </label>
                   <select
                     value={timetableInfo.department}
                     onChange={(e) => handleInputChange('department', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
                   >
                     <option value="">Select department</option>
                     <option value="Computer Science">Computer Science</option>
@@ -624,99 +667,142 @@ const GenerateTimetableModal = ({ onClose, onSave, editingTimetable }) => {
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Resources</h3>
               
-              {/* Subjects */}
-              <div className="mb-6">
-                <h4 className="font-medium text-gray-700 mb-3">
-                  Subjects ({getSelectedCount('subjects')} selected)
-                </h4>
-                <p className="text-gray-600 mb-3">Select subjects to include in the timetable</p>
-                <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3">
-                  {subjectsData.map(subject => (
-                    <label key={subject.id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
-                      <input
-                        type="checkbox"
-                        checked={selectedSubjects.includes(subject.id)}
-                        onChange={() => toggleSelection('subject', subject.id)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="flex-1">
-                        <span className="block font-medium">{subject.name}</span>
-                        <span className="block text-sm text-gray-500">{subject.code} - {subject.department} - {subject.credits} credits</span>
-                      </span>
-                    </label>
-                  ))}
+              {loadingResources ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                  <p className="mt-4 text-gray-600">Loading resources...</p>
                 </div>
-              </div>
+              ) : resourcesError ? (
+                <div className="text-center py-8 text-red-600">
+                  <p>{resourcesError}</p>
+                  <button 
+                    onClick={fetchResources}
+                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Subjects */}
+                  <div className="mb-6">
+                    <h4 className="font-medium text-gray-700 mb-3">
+                      Subjects ({getSelectedCount('subjects')} selected)
+                    </h4>
+                    <p className="text-gray-600 mb-3">Select subjects to include in the timetable</p>
+                    {subjectsData.length === 0 ? (
+                      <p className="text-gray-500 italic">No subjects available. Add subjects first.</p>
+                    ) : (
+                      <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3">
+                        {subjectsData.map(subject => (
+                          <label key={subject._id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
+                            <input
+                              type="checkbox"
+                              checked={selectedSubjects.includes(subject._id)}
+                              onChange={() => toggleSelection('subject', subject._id)}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="flex-1">
+                              <span className="block font-medium">{subject.name || subject.title}</span>
+                              <span className="block text-sm text-gray-500">
+                                {subject.code} - {subject.department} - {subject.credits || 0} credits
+                              </span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
-              {/* Classrooms */}
-              <div className="mb-6">
-                <h4 className="font-medium text-gray-700 mb-3">
-                  Classrooms ({getSelectedCount('classrooms')} selected)
-                </h4>
-                <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3">
-                  {classroomsData.map(classroom => (
-                    <label key={classroom.id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
-                      <input
-                        type="checkbox"
-                        checked={selectedClassrooms.includes(classroom.id)}
-                        onChange={() => toggleSelection('classroom', classroom.id)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="flex-1">
-                        <span className="block font-medium">{classroom.name}</span>
-                        <span className="block text-sm text-gray-500">{classroom.code} - Capacity: {classroom.capacity}</span>
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+                  {/* Classrooms */}
+                  <div className="mb-6">
+                    <h4 className="font-medium text-gray-700 mb-3">
+                      Classrooms ({getSelectedCount('classrooms')} selected)
+                    </h4>
+                    {classroomsData.length === 0 ? (
+                      <p className="text-gray-500 italic">No classrooms available. Add classrooms first.</p>
+                    ) : (
+                      <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3">
+                        {classroomsData.map(classroom => (
+                          <label key={classroom._id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
+                            <input
+                              type="checkbox"
+                              checked={selectedClassrooms.includes(classroom._id)}
+                              onChange={() => toggleSelection('classroom', classroom._id)}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="flex-1">
+                              <span className="block font-medium">{classroom.name || classroom.title}</span>
+                              <span className="block text-sm text-gray-500">
+                                {classroom.code} - Capacity: {classroom.capacity || 'N/A'}
+                              </span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
-              {/* Faculty */}
-              <div className="mb-6">
-                <h4 className="font-medium text-gray-700 mb-3">
-                  Faculty ({getSelectedCount('faculty')} selected)
-                </h4>
-                <p className="text-gray-600 mb-3">Select faculty members to assign</p>
-                <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3">
-                  {facultyData.map(faculty => (
-                    <label key={faculty.id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
-                      <input
-                        type="checkbox"
-                        checked={selectedFaculty.includes(faculty.id)}
-                        onChange={() => toggleSelection('faculty', faculty.id)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="flex-1">
-                        <span className="block font-medium">{faculty.name}</span>
-                        <span className="block text-sm text-gray-500">{faculty.department} - {faculty.subjects.join(', ')}</span>
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+                  {/* Faculty */}
+                  <div className="mb-6">
+                    <h4 className="font-medium text-gray-700 mb-3">
+                      Faculty ({getSelectedCount('faculty')} selected)
+                    </h4>
+                    <p className="text-gray-600 mb-3">Select faculty members to assign</p>
+                    {facultyData.length === 0 ? (
+                      <p className="text-gray-500 italic">No faculty available. Add faculty first.</p>
+                    ) : (
+                      <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3">
+                        {facultyData.map(faculty => (
+                          <label key={faculty._id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
+                            <input
+                              type="checkbox"
+                              checked={selectedFaculty.includes(faculty._id)}
+                              onChange={() => toggleSelection('faculty', faculty._id)}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="flex-1">
+                              <span className="block font-medium">{faculty.name}</span>
+                              <span className="block text-sm text-gray-500">
+                                {faculty.department || 'No department'}
+                              </span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
-              {/* Student Batches */}
-              <div>
-                <h4 className="font-medium text-gray-700 mb-3">
-                  Student Batches ({getSelectedCount('batches')} selected)
-                </h4>
-                <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3">
-                  {batchesData.map(batch => (
-                    <label key={batch.id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
-                      <input
-                        type="checkbox"
-                        checked={selectedBatches.includes(batch.id)}
-                        onChange={() => toggleSelection('batch', batch.id)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="flex-1">
-                        <span className="block font-medium">{batch.name}</span>
-                        <span className="block text-sm text-gray-500">{batch.code} - {batch.department}</span>
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+                  {/* Student Batches */}
+                  <div>
+                    <h4 className="font-medium text-gray-700 mb-3">
+                      Student Batches ({getSelectedCount('batches')} selected)
+                    </h4>
+                    {batchesData.length === 0 ? (
+                      <p className="text-gray-500 italic">No batches available. Add batches first.</p>
+                    ) : (
+                      <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3">
+                        {batchesData.map(batch => (
+                          <label key={batch._id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
+                            <input
+                              type="checkbox"
+                              checked={selectedBatches.includes(batch._id)}
+                              onChange={() => toggleSelection('batch', batch._id)}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="flex-1">
+                              <span className="block font-medium">{batch.name || batch.title}</span>
+                              <span className="block text-sm text-gray-500">
+                                {batch.code} - {batch.department}
+                              </span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -734,7 +820,7 @@ const GenerateTimetableModal = ({ onClose, onSave, editingTimetable }) => {
                   <input
                     type="number"
                     value={preferences.maxHoursPerDay}
-                    onChange={(e) => handlePreferencesChange('maxHoursPerDay', parseInt(e.target.value))}
+                    onChange={(e) => handlePreferencesChange('maxHoursPerDay', parseInt(e.target.value) || 0)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -746,7 +832,7 @@ const GenerateTimetableModal = ({ onClose, onSave, editingTimetable }) => {
                   <input
                     type="number"
                     value={preferences.breakDuration}
-                    onChange={(e) => handlePreferencesChange('breakDuration', parseInt(e.target.value))}
+                    onChange={(e) => handlePreferencesChange('breakDuration', parseInt(e.target.value) || 0)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -918,6 +1004,57 @@ const GenerateTimetableModal = ({ onClose, onSave, editingTimetable }) => {
 
 // Timetable Grid View Component
 const TimetableGridView = ({ timetable, onClose }) => {
+  const [gridData, setGridData] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (timetable) {
+      fetchGridData();
+    }
+  }, [timetable]);
+
+  const fetchGridData = async () => {
+    try {
+      setLoading(true);
+      // Fetch timetable grid data from API
+      // This would be a separate API endpoint like timetableAPI.getGrid(timetable._id)
+      // For now, use the data from timetable or show placeholder
+      
+      if (timetable.gridData) {
+        setGridData(timetable.gridData);
+      } else {
+        // Create default grid structure
+        setGridData({
+          days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+          timeSlots: ['09:00-10:00', '10:00-11:00', '11:00-12:00', '12:00-13:00', '13:00-14:00', '14:00-15:00'],
+          schedule: Array(5).fill().map(() => Array(6).fill('No schedule data'))
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching grid data:', err);
+      setGridData({
+        days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+        timeSlots: ['09:00-10:00', '10:00-11:00', '11:00-12:00', '12:00-13:00', '13:00-14:00', '14:00-15:00'],
+        schedule: Array(5).fill().map(() => Array(6).fill('Error loading data'))
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!gridData) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl">
+          <div className="p-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading timetable grid...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
@@ -939,30 +1076,37 @@ const TimetableGridView = ({ timetable, onClose }) => {
 
         {/* Timetable Grid */}
         <div className="p-6 max-h-[70vh] overflow-y-auto">
-          <div className="overflow-x-auto">
-            <table className="min-w-full border-collapse border border-gray-300">
-              <thead>
-                <tr>
-                  <th className="border border-gray-300 bg-gray-100 p-3 font-semibold">Time/Day</th>
-                  {timetable.gridData.days.map(day => (
-                    <th key={day} className="border border-gray-300 bg-gray-100 p-3 font-semibold">{day}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {timetable.gridData.timeSlots.map((timeSlot, timeIndex) => (
-                  <tr key={timeSlot}>
-                    <td className="border border-gray-300 bg-gray-50 p-3 font-medium">{timeSlot}</td>
-                    {timetable.gridData.days.map((day, dayIndex) => (
-                      <td key={day} className="border border-gray-300 p-3">
-                        {timetable.gridData.schedule[dayIndex][timeIndex]}
-                      </td>
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Loading schedule...</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse border border-gray-300">
+                <thead>
+                  <tr>
+                    <th className="border border-gray-300 bg-gray-100 p-3 font-semibold">Time/Day</th>
+                    {gridData.days.map(day => (
+                      <th key={day} className="border border-gray-300 bg-gray-100 p-3 font-semibold">{day}</th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {gridData.timeSlots.map((timeSlot, timeIndex) => (
+                    <tr key={timeSlot}>
+                      <td className="border border-gray-300 bg-gray-50 p-3 font-medium">{timeSlot}</td>
+                      {gridData.days.map((day, dayIndex) => (
+                        <td key={day} className="border border-gray-300 p-3">
+                          {gridData.schedule[dayIndex]?.[timeIndex] || 'Free'}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

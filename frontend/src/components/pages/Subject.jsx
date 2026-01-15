@@ -1,43 +1,18 @@
-import React, { useState } from 'react';
+// classroom/frontend/src/components/pages/Subject.jsx
+import React, { useState, useEffect } from 'react';
+import { subjectAPI } from '../../services/api';
 
 const Subject = () => {
-  const [subjects, setSubjects] = useState([
-    {
-      id: 1,
-      name: "DAA",
-      code: "DR2345",
-      department: "Civil Engineering",
-      credits: 4,
-      type: "Core",
-      description: "Design and Analysis of Algorithms is a fundamental area in computer science that focuses on understanding how to solve problems efficiently using algorithms."
-    },
-    {
-      id: 2,
-      name: "Introduction to Programming",
-      code: "CS101",
-      department: "Computer Science",
-      credits: 3,
-      type: "Core",
-      description: "Fundamentals of computer programming using Python, covering data structures, algorithms, and problem-solving."
-    },
-    {
-      id: 3,
-      name: "Calculus I",
-      code: "MA101",
-      department: "Mathematics",
-      credits: 4,
-      type: "Core",
-      description: "First course in differential and integral calculus, including limits, derivatives, integrals, and their applications."
-    }
-  ]);
-
+  const [subjects, setSubjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('All Departments');
   const [selectedType, setSelectedType] = useState('All Types');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingSubject, setEditingSubject] = useState(null);
-  
+
   const [newSubject, setNewSubject] = useState({
     name: '',
     code: '',
@@ -52,17 +27,37 @@ const Subject = () => {
   const departments = ['Civil Engineering', 'Computer Science', 'Mathematics', 'Electrical Engineering', 'Mechanical Engineering', 'Physics'];
   const types = ['Core', 'Elective', 'Lab', 'Project', 'Workshop', 'Seminar'];
 
+
   // Get unique departments for filters
   const departmentOptions = ['All Departments', ...new Set(subjects.map(subject => subject.department))];
   const typeOptions = ['All Types', ...new Set(subjects.map(subject => subject.type))];
 
+  // Fetch subjects from API
+  const fetchSubjects = async () => {
+    try {
+      setLoading(true);
+      const response = await subjectAPI.getAll();
+      setSubjects(response.data.data);
+      setError(null);
+    } catch (err) {
+      setError('Failed to fetch subjects. Please try again.');
+      console.error('Error fetching subjects:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSubjects();
+  }, []);
+
   // Filter subjects
   const filteredSubjects = subjects.filter(subject => {
     const matchesSearch = subject.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         subject.code.toLowerCase().includes(searchTerm.toLowerCase());
+      subject.code.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDepartment = selectedDepartment === 'All Departments' || subject.department === selectedDepartment;
     const matchesType = selectedType === 'All Types' || subject.type === selectedType;
-    
+
     return matchesSearch && matchesDepartment && matchesType;
   });
 
@@ -72,9 +67,16 @@ const Subject = () => {
     setSelectedType('All Types');
   };
 
-  const deleteSubject = (id) => {
+  // Delete subject
+  const deleteSubject = async (id) => {
     if (window.confirm('Are you sure you want to delete this subject?')) {
-      setSubjects(subjects.filter(subject => subject.id !== id));
+      try {
+        await subjectAPI.delete(id);
+        await fetchSubjects(); // Refresh the list
+      } catch (err) {
+        alert('Failed to delete subject. Please try again.');
+        console.error('Error deleting subject:', err);
+      }
     }
   };
 
@@ -94,65 +96,71 @@ const Subject = () => {
   };
 
   // Update subject function
-  const handleUpdateSubject = () => {
+  const handleUpdateSubject = async () => {
     if (!newSubject.name || !newSubject.code || !newSubject.credits || !newSubject.department || !newSubject.type) {
       alert('Please fill in all required fields');
       return;
     }
 
-    const updatedSubject = {
-      ...editingSubject,
-      name: newSubject.name,
-      code: newSubject.code,
-      department: newSubject.department,
-      credits: parseInt(newSubject.credits),
-      type: newSubject.type,
-      description: newSubject.description
-    };
+    try {
+      await subjectAPI.update(editingSubject._id, {
+        name: newSubject.name,
+        code: newSubject.code,
+        department: newSubject.department,
+        credits: parseInt(newSubject.credits),
+        type: newSubject.type,
+        description: newSubject.description
+      });
 
-    setSubjects(subjects.map(subject => 
-      subject.id === editingSubject.id ? updatedSubject : subject
-    ));
-    setShowEditModal(false);
-    setEditingSubject(null);
-    setNewSubject({
-      name: '',
-      code: '',
-      department: 'Computer Science',
-      credits: '',
-      type: 'Core',
-      description: '',
-      status: true
-    });
+      await fetchSubjects(); // Refresh the list
+      setShowEditModal(false);
+      setEditingSubject(null);
+      setNewSubject({
+        name: '',
+        code: '',
+        department: 'Computer Science',
+        credits: '',
+        type: 'Core',
+        description: '',
+        status: true
+      });
+    } catch (err) {
+      alert('Failed to update subject. Please try again.');
+      console.error('Error updating subject:', err);
+    }
   };
 
-  const handleAddSubject = () => {
+  const handleAddSubject = async () => {
     if (!newSubject.name || !newSubject.code || !newSubject.credits || !newSubject.department || !newSubject.type) {
       alert('Please fill in all required fields');
       return;
     }
 
-    const subject = {
-      id: subjects.length > 0 ? Math.max(...subjects.map(s => s.id)) + 1 : 1,
-      name: newSubject.name,
-      code: newSubject.code,
-      department: newSubject.department,
-      credits: parseInt(newSubject.credits),
-      type: newSubject.type,
-      description: newSubject.description
-    };
+    try {
+      await subjectAPI.create({
+        name: newSubject.name,
+        code: newSubject.code,
+        department: newSubject.department,
+        credits: parseInt(newSubject.credits),
+        type: newSubject.type,
+        description: newSubject.description
+      });
 
-    setSubjects([...subjects, subject]);
-    setShowAddModal(false);
-    setNewSubject({
-      name: '',
-      code: '',
-      department: 'Computer Science',
-      credits: '',
-      type: 'Core',
-      description: '',
-      status: true
-    });
+      await fetchSubjects(); // Refresh the list
+      setShowAddModal(false);
+      setNewSubject({
+        name: '',
+        code: '',
+        department: 'Computer Science',
+        credits: '',
+        type: 'Core',
+        description: '',
+        status: true
+      });
+    } catch (err) {
+      alert('Failed to add subject. Please try again.');
+      console.error('Error adding subject:', err);
+    }
   };
 
   const handleInputChange = (e) => {
@@ -163,22 +171,49 @@ const Subject = () => {
     }));
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading subjects...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
+        <div className="text-center text-red-600">
+          <p>{error}</p>
+          <button
+            onClick={fetchSubjects}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Main Content with extra top padding */}
+      {/* Main Content */}
       <div className="pt-24 p-4 md:p-6">
-        
-        {/* Header Section - Exact Classroom jaisa */}
-        <div className="pt-24 text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-800 mb-2">
-               Subject Management
-            </h1>
-            <p className="text-lg text-gray-600">
-                Manage course subjects and curriculum information
-            </p>
+
+        {/* Header Section */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">
+            Subject Management
+          </h1>
+          <p className="text-lg text-gray-600">
+            Manage course subjects and curriculum information
+          </p>
         </div>
 
-        {/* Search and Filters Section - Exact Classroom jaisa */}
+        {/* Search and Filters Section */}
         <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="md:col-span-2">
@@ -205,7 +240,8 @@ const Subject = () => {
                 onChange={(e) => setSelectedDepartment(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {departmentOptions.map(dept => (
+                <option value="All Departments">All Departments</option>
+                {departments.map(dept => (
                   <option key={dept} value={dept}>{dept}</option>
                 ))}
               </select>
@@ -221,7 +257,8 @@ const Subject = () => {
                 onChange={(e) => setSelectedType(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {typeOptions.map(type => (
+                <option value="All Types">All Types</option>
+                {types.map(type => (
                   <option key={type} value={type}>{type}</option>
                 ))}
               </select>
@@ -238,10 +275,10 @@ const Subject = () => {
           </div>
         </div>
 
-        {/* Subject Grid - Exact Classroom cards jaisa */}
+        {/* Subject Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredSubjects.map((subject) => (
-            <div key={subject.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+            <div key={subject._id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
               <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4">
                 <div className="flex justify-between items-start">
                   <h3 className="text-xl font-bold text-white">{subject.code}</h3>
@@ -278,15 +315,15 @@ const Subject = () => {
                 </div>
 
                 <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
-                  <button 
+                  <button
                     onClick={() => handleEditClick(subject)}
                     className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                   >
                     <i className="fas fa-edit mr-2"></i>
                     Edit
                   </button>
-                  <button 
-                    onClick={() => deleteSubject(subject.id)}
+                  <button
+                    onClick={() => deleteSubject(subject._id)}
                     className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
                   >
                     <i className="fas fa-trash mr-2"></i>
@@ -298,7 +335,7 @@ const Subject = () => {
           ))}
         </div>
 
-        {/* Empty State - Exact Classroom jaisa */}
+        {/* Empty State */}
         {filteredSubjects.length === 0 && (
           <div className="text-center py-12">
             <i className="fas fa-book text-6xl text-gray-300 mb-4"></i>
@@ -308,7 +345,7 @@ const Subject = () => {
         )}
       </div>
 
-      {/* Add New Subject Modal - Exact Classroom jaisa */}
+      {/* Add New Subject Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -410,19 +447,6 @@ const Subject = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="status"
-                    checked={newSubject.status}
-                    onChange={handleInputChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 block text-sm text-gray-700">
-                    Active subject
-                  </label>
-                </div>
               </div>
             </div>
 
@@ -444,7 +468,7 @@ const Subject = () => {
         </div>
       )}
 
-      {/* Edit Subject Modal - Exact Classroom jaisa */}
+      {/* Edit Subject Modal */}
       {showEditModal && editingSubject && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -540,19 +564,6 @@ const Subject = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="status"
-                    checked={newSubject.status}
-                    onChange={handleInputChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 block text-sm text-gray-700">
-                    Active subject
-                  </label>
-                </div>
               </div>
             </div>
 
@@ -574,9 +585,9 @@ const Subject = () => {
         </div>
       )}
 
-      {/* Add New Subject Button - Exact Classroom jaisa position */}
+      {/* Add New Subject Button */}
       <div className="fixed bottom-6 right-6">
-        <button 
+        <button
           onClick={() => setShowAddModal(true)}
           className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
         >
@@ -585,8 +596,10 @@ const Subject = () => {
       </div>
     </div>
   );
+
 };
 
 export default Subject;
+
 
 
