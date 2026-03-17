@@ -1,154 +1,915 @@
 import React, { useState, useEffect } from 'react';
-import { timetableAPI } from "../../services/api";
+import axios from 'axios';
+import { facultyAPI } from "../../services/api";
 
-const CreateTimetable = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All Statuses');
-  const [departmentFilter, setDepartmentFilter] = useState('All Departments');
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [showGridView, setShowGridView] = useState(false);
-  const [selectedTimetable, setSelectedTimetable] = useState(null);
-  const [editingTimetable, setEditingTimetable] = useState(null);
-  const [timetableData, setTimetableData] = useState([]);
+const Timetable = () => {
+  const [timetables, setTimetables] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const statusOptions = ['All Statuses', 'Draft', 'Approved', 'Pending Review'];
-  const departmentOptions = ['All Departments', 'Computer Science', 'Electrical Engineering', 'Mechanical Engineering'];
+  // Filter states - Sirf search aur semester
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedSemester, setSelectedSemester] = useState("All Semesters");
 
-  // Fetch timetables on component mount and when filters change
-  const fetchTimetables = async () => {
+  // Form states
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [selectedTimetable, setSelectedTimetable] = useState(null);
+
+  // Data for forms
+  const [batches, setBatches] = useState([]);
+  const [classrooms, setClassrooms] = useState([]);
+  const [faculties, setFaculties] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+
+  // New timetable form
+  const [newTimetable, setNewTimetable] = useState({
+    name: '',
+    batch: '',
+    semester: '1',
+    academicYear: getCurrentAcademicYear(),
+    status: 'Draft',
+    breaks: [],
+    totalStudents: 0
+  });
+
+  // Schedule entry form
+  const [scheduleEntry, setScheduleEntry] = useState({
+    day: 'Monday',
+    timeSlot: '',
+    subject: '',
+    faculty: '',
+    classroom: '',
+    type: 'Theory',
+    batchDivision: '',
+    studentCount: 0
+  });
+
+  // Parallel class entry form
+  const [parallelEntry, setParallelEntry] = useState({
+    subject: '',
+    faculty: '',
+    classroom: '',
+    type: 'Theory',
+    batchDivision: '',
+    studentCount: 0
+  });
+
+  // Break entry form
+  const [breakEntry, setBreakEntry] = useState({
+    day: 'Monday',
+    timeSlot: '',
+    name: 'Lunch Break'
+  });
+
+  // UI state for showing parallel form
+  const [showParallelForm, setShowParallelForm] = useState(false);
+  const [parallelClasses, setParallelClasses] = useState([]);
+
+  // Filtered subjects based on selected batch's current semester
+  const [batchSubjects, setBatchSubjects] = useState([]);
+
+  // Filtered faculty based on selected subject
+  const [filteredFaculty, setFilteredFaculty] = useState([]);
+
+  // Selected batch details
+  const [selectedBatchDetails, setSelectedBatchDetails] = useState(null);
+
+  // Base URL
+  const API_URL = 'http://localhost:5000/api';
+
+  // Helper function to get current academic year
+  function getCurrentAcademicYear() {
+    const currentYear = new Date().getFullYear();
+    const nextYear = currentYear + 1;
+    return `${currentYear}-${nextYear}`;
+  }
+
+  // Get semester text
+  const getSemesterText = (semesterNumber) => {
+    return `Semester ${semesterNumber}`;
+  };
+
+  // Days of week
+  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+  // Time slot validation regex
+  const timeSlotRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+
+  // Types that require batch division - ONLY Lab
+  const batchDivisionRequiredTypes = ['Lab'];
+
+  // Fetch all data
+  const fetchAllData = async () => {
     try {
       setLoading(true);
+
+      const timetablesRes = await axios.get(`${API_URL}/timetables`);
+      const timetablesData = timetablesRes.data?.data || timetablesRes.data || [];
+
+      const batchesRes = await axios.get(`${API_URL}/batches`);
+      console.log('Batches response:', batchesRes.data);
+
+      let batchesData = [];
+      if (batchesRes.data?.data) {
+        batchesData = batchesRes.data.data;
+      } else if (Array.isArray(batchesRes.data)) {
+        batchesData = batchesRes.data;
+      }
+
+      const classroomsRes = await axios.get(`${API_URL}/classrooms`);
+      const classroomsData = classroomsRes.data?.data || classroomsRes.data || [];
+
+      let facultiesData = [];
+      try {
+        const response = await facultyAPI.getAll();
+        if (response.data) {
+          if (Array.isArray(response.data.data)) {
+            facultiesData = response.data.data;
+          } else if (Array.isArray(response.data)) {
+            facultiesData = response.data;
+          }
+        }
+      } catch (facultyErr) {
+        console.error("Error fetching faculty:", facultyErr);
+      }
+
+      const subjectsRes = await axios.get(`${API_URL}/subjects`);
+      const subjectsData = subjectsRes.data?.data || subjectsRes.data || [];
+
+      const formattedSubjects = subjectsData.map(subject => ({
+        ...subject,
+        displayName: subject.subjectCode || subject.code || subject.name,
+        fullName: `${subject.subjectCode || subject.code || ''} - ${subject.name || ''}`
+      }));
+
+      setTimetables(timetablesData);
+      setBatches(batchesData);
+      setClassrooms(classroomsData);
+      setFaculties(facultiesData);
+      setSubjects(formattedSubjects);
+
       setError(null);
-      
-      const params = {};
-      if (searchTerm && searchTerm !== '') params.search = searchTerm;
-      if (statusFilter && statusFilter !== 'All Statuses') params.status = statusFilter;
-      if (departmentFilter && departmentFilter !== 'All Departments') params.department = departmentFilter;
-      
-      const res = await timetableAPI.getAll(params);
-      setTimetableData(res.data.data || res.data || []);
     } catch (err) {
-      console.error("Failed to fetch timetables", err);
-      setError('Failed to load timetables. Please try again.');
-      setTimetableData([]);
+      console.error('Error fetching data:', err);
+      setError(`Failed to load data: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchTimetables();
+    fetchAllData();
   }, []);
 
-  // Filter timetables based on search and filters
-  const filteredTimetables = timetableData.filter(timetable => {
-    const matchesSearch = searchTerm === '' || 
-      (timetable.title && timetable.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (timetable.department && timetable.department.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesStatus = statusFilter === 'All Statuses' || 
-      timetable.status === statusFilter;
-    const matchesDepartment = departmentFilter === 'All Departments' || 
-      (timetable.department && timetable.department.includes(departmentFilter));
-    
-    return matchesSearch && matchesStatus && matchesDepartment;
+  // Load batch subjects when batch is selected
+  useEffect(() => {
+    if (newTimetable.batch) {
+      const selectedBatch = batches.find(b => b._id === newTimetable.batch);
+      if (selectedBatch) {
+        console.log('Selected batch:', selectedBatch);
+        setSelectedBatchDetails(selectedBatch);
+
+        const currentSemester = selectedBatch.currentSemester || 1;
+        let subjectsForBatch = [];
+
+        if (selectedBatch.semesters && Array.isArray(selectedBatch.semesters)) {
+          const currentSemesterData = selectedBatch.semesters.find(
+            s => s.semesterNumber === currentSemester
+          );
+
+          if (currentSemesterData && currentSemesterData.subjects) {
+            subjectsForBatch = currentSemesterData.subjects
+              .map(s => s.subject)
+              .filter(Boolean);
+          }
+
+          if (subjectsForBatch.length === 0) {
+            subjectsForBatch = subjects.filter(
+              sub =>
+                sub.department === selectedBatch.department &&
+                sub.semester === `Semester ${currentSemester}`
+            );
+          }
+        } else if (selectedBatch.subjects && Array.isArray(selectedBatch.subjects)) {
+          subjectsForBatch = selectedBatch.subjects;
+        }
+
+        console.log('Subjects for current semester:', subjectsForBatch);
+        setBatchSubjects(subjectsForBatch);
+
+        setNewTimetable(prev => ({
+          ...prev,
+          totalStudents: selectedBatch.totalStudents || 0,
+          semester: currentSemester,
+          academicYear: selectedBatch.academicYear || prev.academicYear // Use batch's academic year
+        }));
+
+        setScheduleEntry(prev => ({
+          ...prev,
+          subject: '',
+          faculty: ''
+        }));
+        setFilteredFaculty([]);
+      }
+    } else {
+      setBatchSubjects([]);
+      setSelectedBatchDetails(null);
+    }
+  }, [newTimetable.batch, batches, subjects]);
+
+  // Filter faculty when subject is selected
+  useEffect(() => {
+    if (scheduleEntry.subject) {
+      const selectedSubject = subjects.find(
+        s => s._id === scheduleEntry.subject
+      );
+
+      if (!selectedSubject) {
+        setFilteredFaculty([]);
+        return;
+      }
+
+      const subjectCode =
+        selectedSubject.subjectCode ||
+        selectedSubject.code ||
+        selectedSubject.name;
+
+      const facultyForSubject = faculties.filter(faculty =>
+        Array.isArray(faculty.subjects) &&
+        faculty.subjects.some(sub =>
+          subjectCode.toLowerCase().includes(sub.toLowerCase())
+        )
+      );
+
+      console.log("Filtered faculty:", facultyForSubject);
+      setFilteredFaculty(facultyForSubject);
+
+      setScheduleEntry(prev => ({
+        ...prev,
+        faculty: ""
+      }));
+    } else {
+      setFilteredFaculty([]);
+    }
+  }, [scheduleEntry.subject, faculties, subjects]);
+
+  // Effect to handle batch division clearing when type changes
+  useEffect(() => {
+    if (!batchDivisionRequiredTypes.includes(scheduleEntry.type)) {
+      setScheduleEntry(prev => ({
+        ...prev,
+        batchDivision: '',
+        studentCount: 0
+      }));
+      setParallelClasses([]);
+    } else {
+      if (scheduleEntry.batchDivision && selectedBatchDetails?.totalStudents) {
+        const count = getStudentCountForDivision(scheduleEntry.batchDivision, selectedBatchDetails.totalStudents);
+        setScheduleEntry(prev => ({
+          ...prev,
+          studentCount: count
+        }));
+      }
+    }
+  }, [scheduleEntry.type, scheduleEntry.batchDivision, selectedBatchDetails]);
+
+  // Helper function to get student count based on batch division
+  const getStudentCountForDivision = (division, totalStudents) => {
+    if (!division || !totalStudents) return 0;
+
+    const b1Size = 25;
+    const b2Size = 25;
+    const b3Size = Math.max(0, totalStudents - 50);
+
+    if (division === 'B1') return Math.min(b1Size, totalStudents);
+    if (division === 'B2') return totalStudents > 25 ? Math.min(b2Size, totalStudents - 25) : 0;
+    if (division === 'B3') return b3Size;
+
+    return 0;
+  };
+
+  // Helper function to get batch name
+  const getBatchName = (batch) => {
+    if (!batch) return 'Not Assigned';
+    if (typeof batch === 'object') {
+      return batch.name || batch.batchName || batch.code || 'Not Assigned';
+    }
+    const found = batches.find(b => b._id === batch);
+    return found ? (found.name || found.batchName || found.code) : 'Not Assigned';
+  };
+
+  // Helper function to get faculty display name
+  const getFacultyDisplayName = (faculty) => {
+    if (!faculty) return 'Unknown Faculty';
+    if (typeof faculty === 'object') {
+      if (faculty.name) return faculty.name;
+      if (faculty.user?.name) return faculty.user.name;
+    }
+    return 'Unknown Faculty';
+  };
+
+  // Helper function to get subject display name
+  const getSubjectDisplayName = (subject) => {
+    if (!subject) return 'Unknown Subject';
+    if (typeof subject === 'object') {
+      return subject.subjectCode || subject.code || subject.name || 'Unknown';
+    }
+    const found = subjects.find(s => s._id === subject);
+    return found ? (found.subjectCode || found.code || found.name) : 'Unknown';
+  };
+
+  // Validate time slot format
+  const isValidTimeSlot = (timeSlot) => {
+    return timeSlotRegex.test(timeSlot);
+  };
+
+  // Calculate batch divisions
+  const calculateBatchDivisions = (totalStudents) => {
+    if (!totalStudents || totalStudents <= 0) return [];
+
+    const b1Size = 25;
+    const b2Size = 25;
+    const b3Size = Math.max(0, totalStudents - 50);
+
+    const divisions = [];
+
+    divisions.push({
+      id: 1,
+      name: 'Batch 1',
+      label: 'B1',
+      size: Math.min(b1Size, totalStudents)
+    });
+
+    if (totalStudents > 25) {
+      divisions.push({
+        id: 2,
+        name: 'Batch 2',
+        label: 'B2',
+        size: Math.min(b2Size, totalStudents - 25)
+      });
+    }
+
+    if (totalStudents > 50) {
+      divisions.push({
+        id: 3,
+        name: 'Batch 3',
+        label: 'B3',
+        size: b3Size
+      });
+    }
+
+    return divisions;
+  };
+
+  // Get batch options
+  const getBatchOptions = (totalStudents) => {
+    if (!totalStudents || totalStudents <= 0) return [];
+
+    const options = [];
+
+    options.push({
+      value: 'B1',
+      label: `B1 (25 students)`,
+      size: Math.min(25, totalStudents)
+    });
+
+    if (totalStudents > 25) {
+      options.push({
+        value: 'B2',
+        label: `B2 (25 students)`,
+        size: Math.min(25, totalStudents - 25)
+      });
+    }
+
+    if (totalStudents > 50) {
+      options.push({
+        value: 'B3',
+        label: `B3 (${totalStudents - 50} students)`,
+        size: totalStudents - 50
+      });
+    }
+
+    return options;
+  };
+
+  // Check if time slot overlaps with existing entries
+  const hasTimeOverlap = (day, timeSlot, excludeId = null) => {
+    const [start, end] = timeSlot.split('-').map(t => {
+      const [hours, minutes] = t.split(':').map(Number);
+      return hours * 60 + minutes;
+    });
+
+    const entries = [
+      ...(newTimetable.schedule || []),
+      ...(newTimetable.breaks || [])
+    ].filter(e => e.day === day && e._id !== excludeId);
+
+    return entries.some(entry => {
+      const [entryStart, entryEnd] = entry.timeSlot.split('-').map(t => {
+        const [hours, minutes] = t.split(':').map(Number);
+        return hours * 60 + minutes;
+      });
+
+      return (start < entryEnd && end > entryStart);
+    });
+  };
+
+  // Filter timetables - Sirf search aur semester ke hisaab se
+  const filteredTimetables = timetables.filter(timetable => {
+    if (!timetable) return false;
+
+    const batchInfo = timetable.batch;
+    const batchName = getBatchName(batchInfo).toLowerCase();
+    const batchDepartment = batchInfo?.department || '';
+    const batchSemester = timetable.semester || 1;
+
+    const matchesSearch = searchTerm === "" ||
+      timetable.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      batchName.includes(searchTerm.toLowerCase()) ||
+      batchDepartment.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const filterSemesterNumber = selectedSemester === "All Semesters"
+      ? null
+      : parseInt(selectedSemester.replace("Semester ", ""));
+
+    const matchesSemester = selectedSemester === "All Semesters" ||
+      batchSemester === filterSemesterNumber;
+
+    return matchesSearch && matchesSemester;
   });
 
-  const handleClearFilters = () => {
-    setSearchTerm('');
-    setStatusFilter('All Statuses');
-    setDepartmentFilter('All Departments');
-    fetchTimetables(); // Refresh with cleared filters
+  // Clear filters function
+  const clearFilters = () => {
+    setSearchTerm("");
+    setSelectedSemester("All Semesters");
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Draft': return 'bg-yellow-100 text-yellow-800';
-      case 'Approved': return 'bg-green-100 text-green-800';
-      case 'Pending Review': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+  // Handle form changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewTimetable({
+      ...newTimetable,
+      [name]: value
+    });
+  };
+
+  const handleScheduleChange = (e) => {
+    const { name, value } = e.target;
+    setScheduleEntry({
+      ...scheduleEntry,
+      [name]: value
+    });
+  };
+
+  const handleParallelChange = (e) => {
+    const { name, value } = e.target;
+    setParallelEntry({
+      ...parallelEntry,
+      [name]: value
+    });
+  };
+
+  const handleBreakChange = (e) => {
+    const { name, value } = e.target;
+    setBreakEntry({
+      ...breakEntry,
+      [name]: value
+    });
+  };
+
+  // Add parallel class
+  const addParallelClass = () => {
+    if (!parallelEntry.subject || !parallelEntry.faculty || !parallelEntry.classroom) {
+      alert('Please fill all fields for parallel class');
+      return;
     }
-  };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'Draft': return 'fa-edit';
-      case 'Approved': return 'fa-check-circle';
-      case 'Pending Review': return 'fa-clock';
-      default: return 'fa-file';
+    if (batchDivisionRequiredTypes.includes(parallelEntry.type) && !parallelEntry.batchDivision) {
+      alert('Batch division is required for Lab classes');
+      return;
     }
+
+    const selectedSubject = subjects.find(s => s._id === parallelEntry.subject);
+    const selectedFaculty = faculties.find(f => f._id === parallelEntry.faculty);
+    const selectedClassroom = classrooms.find(c => c._id === parallelEntry.classroom);
+
+    if (!selectedSubject || !selectedFaculty || !selectedClassroom) {
+      alert('Selected options not found');
+      return;
+    }
+
+    const newParallelClass = {
+      id: Date.now().toString(),
+      subject: {
+        _id: selectedSubject._id,
+        name: selectedSubject.name,
+        code: selectedSubject.subjectCode || selectedSubject.code
+      },
+      faculty: {
+        _id: selectedFaculty._id,
+        name: getFacultyDisplayName(selectedFaculty)
+      },
+      classroom: {
+        _id: selectedClassroom._id,
+        name: selectedClassroom.name,
+        building: selectedClassroom.building
+      },
+      type: parallelEntry.type,
+      batchDivision: parallelEntry.batchDivision,
+      studentCount: parallelEntry.batchDivision && selectedBatchDetails?.totalStudents ?
+        getStudentCountForDivision(parallelEntry.batchDivision, selectedBatchDetails.totalStudents) :
+        parallelEntry.studentCount
+    };
+
+    setParallelClasses([...parallelClasses, newParallelClass]);
+    setParallelEntry({
+      subject: '',
+      faculty: '',
+      classroom: '',
+      type: 'Theory',
+      batchDivision: '',
+      studentCount: 0
+    });
   };
 
-  // Handle viewing timetable grid
-  const handleViewGrid = (timetable) => {
-    setSelectedTimetable(timetable);
-    setShowGridView(true);
+  // Remove parallel class
+  const removeParallelClass = (id) => {
+    setParallelClasses(parallelClasses.filter(pc => pc.id !== id));
   };
 
-  // Handle downloading timetable as PDF
-  const handleDownloadPDF = async (timetable) => {
+  // Add main schedule entry
+  const addScheduleEntry = () => {
+    if (!scheduleEntry.timeSlot) {
+      alert('Please enter a time slot');
+      return;
+    }
+
+    if (!isValidTimeSlot(scheduleEntry.timeSlot)) {
+      alert('Please enter a valid time slot format (e.g., 09:00-10:30)');
+      return;
+    }
+
+    if (hasTimeOverlap(scheduleEntry.day, scheduleEntry.timeSlot)) {
+      alert('This time slot overlaps with an existing class or break');
+      return;
+    }
+
+    if (batchDivisionRequiredTypes.includes(scheduleEntry.type) && !scheduleEntry.batchDivision) {
+      alert('Batch division is required for Lab classes');
+      return;
+    }
+
+    const mainClass = {
+      _id: `main-${Date.now().toString()}`,
+      day: scheduleEntry.day,
+      timeSlot: scheduleEntry.timeSlot,
+      subject: scheduleEntry.subject ? {
+        _id: scheduleEntry.subject,
+        name: subjects.find(s => s._id === scheduleEntry.subject)?.name,
+        code: subjects.find(s => s._id === scheduleEntry.subject)?.subjectCode ||
+          subjects.find(s => s._id === scheduleEntry.subject)?.code
+      } : null,
+      faculty: scheduleEntry.faculty ? {
+        _id: scheduleEntry.faculty,
+        name: getFacultyDisplayName(faculties.find(f => f._id === scheduleEntry.faculty))
+      } : null,
+      classroom: scheduleEntry.classroom ? {
+        _id: scheduleEntry.classroom,
+        name: classrooms.find(c => c._id === scheduleEntry.classroom)?.name
+      } : null,
+      type: scheduleEntry.type,
+      batchDivision: scheduleEntry.batchDivision,
+      studentCount: scheduleEntry.batchDivision && selectedBatchDetails?.totalStudents ?
+        getStudentCountForDivision(scheduleEntry.batchDivision, selectedBatchDetails.totalStudents) :
+        scheduleEntry.studentCount,
+      parallelClasses: parallelClasses
+    };
+
+    setNewTimetable({
+      ...newTimetable,
+      schedule: [...(newTimetable.schedule || []), mainClass]
+    });
+
+    setScheduleEntry({
+      day: 'Monday',
+      timeSlot: '',
+      subject: '',
+      faculty: '',
+      classroom: '',
+      type: 'Theory',
+      batchDivision: '',
+      studentCount: 0
+    });
+    setParallelClasses([]);
+    setShowParallelForm(false);
+  };
+
+  // Add break entry
+  const addBreakEntry = () => {
+    if (!breakEntry.timeSlot) {
+      alert('Please enter a time slot for the break');
+      return;
+    }
+
+    if (!isValidTimeSlot(breakEntry.timeSlot)) {
+      alert('Please enter a valid time slot format (e.g., 13:00-14:00)');
+      return;
+    }
+
+    if (!breakEntry.name) {
+      alert('Please enter a break name');
+      return;
+    }
+
+    if (hasTimeOverlap(breakEntry.day, breakEntry.timeSlot)) {
+      alert('This time slot overlaps with an existing class or break');
+      return;
+    }
+
+    const breakItem = {
+      _id: `break-${Date.now().toString()}`,
+      day: breakEntry.day,
+      timeSlot: breakEntry.timeSlot,
+      name: breakEntry.name,
+      type: 'break'
+    };
+
+    setNewTimetable(prev => ({
+      ...prev,
+      breaks: [...(prev.breaks || []), breakItem]
+    }));
+
+    setBreakEntry({
+      day: 'Monday',
+      timeSlot: '',
+      name: 'Lunch Break'
+    });
+
+    alert('Break added successfully!');
+  };
+
+  // Remove schedule entry
+  const removeScheduleEntry = (id) => {
+    setNewTimetable({
+      ...newTimetable,
+      schedule: (newTimetable.schedule || []).filter(entry => entry._id !== id)
+    });
+  };
+
+  // Remove break entry
+  const removeBreakEntry = (id) => {
+    setNewTimetable({
+      ...newTimetable,
+      breaks: (newTimetable.breaks || []).filter(entry => entry._id !== id)
+    });
+  };
+
+  // Edit timetable
+  const editTimetable = async (timetable) => {
     try {
-      // Call API to generate/download PDF
-      const response = await timetableAPI.downloadPDF(timetable._id);
-      
-      // Create a blob from the response
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${timetable.title.replace(/\s+/g, '_')}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      const response = await axios.get(`${API_URL}/timetables/${timetable._id}`);
+      const fullTimetable = response.data?.data || response.data;
+      console.log('Editing timetable:', fullTimetable);
+
+      const formattedSchedule = (fullTimetable.schedule || []).map(entry => ({
+        _id: entry._id || `main-${Date.now()}-${Math.random()}`,
+        day: entry.day,
+        timeSlot: entry.timeSlot,
+        subject: entry.subject ? {
+          _id: entry.subject._id,
+          name: entry.subject.name,
+          code: entry.subject.code
+        } : null,
+        faculty: entry.faculty ? {
+          _id: entry.faculty._id,
+          name: entry.faculty.name
+        } : null,
+        classroom: entry.classroom ? {
+          _id: entry.classroom._id,
+          name: entry.classroom.name
+        } : null,
+        type: entry.type,
+        batchDivision: entry.batchDivision,
+        studentCount: entry.studentCount,
+        parallelClasses: (entry.parallelClasses || []).map(pc => ({
+          id: pc._id || `pc-${Date.now()}-${Math.random()}`,
+          subject: {
+            _id: pc.subject?._id,
+            name: pc.subject?.name,
+            code: pc.subject?.code
+          },
+          faculty: {
+            _id: pc.faculty?._id,
+            name: pc.faculty?.name
+          },
+          classroom: {
+            _id: pc.classroom?._id,
+            name: pc.classroom?.name
+          },
+          type: pc.type,
+          batchDivision: pc.batchDivision,
+          studentCount: pc.studentCount
+        }))
+      }));
+
+      setNewTimetable({
+        _id: fullTimetable._id,
+        name: fullTimetable.name,
+        batch: fullTimetable.batch?._id || fullTimetable.batch,
+        semester: fullTimetable.semester?.toString() || '1',
+        academicYear: fullTimetable.academicYear || getCurrentAcademicYear(),
+        schedule: formattedSchedule,
+        breaks: (fullTimetable.breaks || []).map(b => ({
+          _id: b._id || `break-${Date.now()}-${Math.random()}`,
+          day: b.day,
+          timeSlot: b.timeSlot,
+          name: b.name,
+          type: 'break'
+        })),
+        totalStudents: fullTimetable.totalStudents || 0
+      });
+
+      setShowCreateModal(true);
     } catch (err) {
-      console.error('Error downloading PDF:', err);
-      alert('Failed to download timetable. Please try again.');
+      console.error('Error fetching timetable for edit:', err);
+      alert('Failed to load timetable for editing');
     }
   };
 
-  // Handle editing a timetable
-  const handleEditTimetable = (timetable) => {
-    setEditingTimetable(timetable);
-    setShowGenerateModal(true);
-  };
-
-  // Handle deleting a timetable
-  const handleDeleteTimetable = async (timetableId) => {
-    if (window.confirm('Are you sure you want to delete this timetable? This action cannot be undone.')) {
-      try {
-        await timetableAPI.delete(timetableId);
-        await fetchTimetables(); // Refresh the list
-      } catch (err) {
-        console.error('Error deleting timetable:', err);
-        alert('Failed to delete timetable. Please try again.');
-      }
+  // Create/Update timetable
+  const createTimetable = async () => {
+    if (!newTimetable.name || !newTimetable.batch) {
+      alert('Please fill all required fields');
+      return;
     }
-  };
 
-  // Handle saving edited timetable
-  const handleSaveTimetable = async (updatedTimetable) => {
+    if ((newTimetable.schedule || []).length === 0) {
+      alert('Please add at least one class to the schedule');
+      return;
+    }
+
     try {
-      if (editingTimetable) {
-        // Update existing timetable
-        await timetableAPI.update(editingTimetable._id, updatedTimetable);
+      const scheduleData = (newTimetable.schedule || []).map(entry => ({
+        day: entry.day,
+        timeSlot: entry.timeSlot,
+        subject: entry.subject?._id,
+        faculty: entry.faculty?._id,
+        classroom: entry.classroom?._id,
+        type: entry.type,
+        batchDivision: entry.type === 'Lab' && entry.batchDivision ? entry.batchDivision : undefined,
+        studentCount: entry.studentCount,
+        parallelClasses: (entry.parallelClasses || []).map(pc => ({
+          subject: pc.subject._id,
+          faculty: pc.faculty._id,
+          classroom: pc.classroom._id,
+          type: pc.type,
+          batchDivision: pc.type === 'Lab' && pc.batchDivision ? pc.batchDivision : undefined,
+          studentCount: pc.studentCount
+        }))
+      }));
+
+      const breakData = (newTimetable.breaks || []).map(breakItem => ({
+        day: breakItem.day,
+        timeSlot: breakItem.timeSlot,
+        name: breakItem.name,
+        type: 'break'
+      }));
+
+      const selectedBatch = batches.find(b => b._id === newTimetable.batch);
+
+      const timetableData = {
+        name: newTimetable.name,
+        batch: newTimetable.batch,
+        semester: parseInt(newTimetable.semester),
+        academicYear: newTimetable.academicYear,
+        schedule: scheduleData,
+        breaks: breakData,
+        totalStudents: selectedBatch?.totalStudents || 0,
+        status: 'Draft'
+      };
+
+      console.log('Sending timetable data:', timetableData);
+
+      let response;
+      if (newTimetable._id) {
+        response = await axios.put(`${API_URL}/timetables/${newTimetable._id}`, timetableData);
+        console.log('Timetable updated:', response.data);
+        alert('Timetable updated successfully!');
       } else {
-        // Add new timetable
-        await timetableAPI.create(updatedTimetable);
+        response = await axios.post(`${API_URL}/timetables`, timetableData);
+        console.log('Timetable created:', response.data);
+        alert('Timetable created successfully!');
       }
-      
-      await fetchTimetables(); // Refresh the list
-      setShowGenerateModal(false);
-      setEditingTimetable(null);
+
+      setShowCreateModal(false);
+
+      setNewTimetable({
+        name: '',
+        batch: '',
+        semester: '1',
+        academicYear: getCurrentAcademicYear(),
+        schedule: [],
+        breaks: [],
+        totalStudents: 0
+      });
+
+      await fetchAllData();
     } catch (err) {
       console.error('Error saving timetable:', err);
-      alert('Failed to save timetable. Please try again.');
+      alert(err.response?.data?.message || 'Failed to save timetable');
     }
   };
 
-  // Loading state
+  // View timetable details
+  const viewTimetable = async (timetable) => {
+    try {
+      const response = await axios.get(`${API_URL}/timetables/${timetable._id}`);
+      const fullTimetable = response.data?.data || response.data;
+      console.log('Full timetable data:', fullTimetable);
+
+      setSelectedTimetable(fullTimetable);
+      setShowViewModal(true);
+    } catch (err) {
+      console.error('Error fetching timetable details:', err);
+      alert('Failed to load timetable details');
+    }
+  };
+
+  // Delete timetable
+  const deleteTimetable = async (id) => {
+    if (window.confirm('Are you sure you want to delete this timetable?')) {
+      try {
+        await axios.delete(`${API_URL}/timetables/${id}`);
+        alert('Timetable deleted successfully!');
+        fetchAllData();
+      } catch (err) {
+        console.error('Error deleting timetable:', err);
+        alert('Failed to delete timetable');
+      }
+    }
+  };
+
+  // Get all entries for a day sorted by time
+  const getSortedEntriesForDay = (timetable, day) => {
+    const classes = (timetable.schedule || [])
+      .filter(s => s && s.day === day)
+      .map(c => ({
+        ...c,
+        entryType: 'class',
+        parallelClasses: c.parallelClasses || []
+      }));
+
+    const breaks = (timetable.breaks || [])
+      .filter(b => b && b.day === day)
+      .map(b => ({
+        ...b,
+        entryType: 'break',
+        type: 'break'
+      }));
+
+    return [...classes, ...breaks].sort((a, b) => {
+      const getMinutes = (time) => {
+        if (!time) return 0;
+        const [h, m] = time.split(':').map(Number);
+        return h * 60 + (m || 0);
+      };
+
+      const aStart = a.timeSlot ? getMinutes(a.timeSlot.split('-')[0]) : 0;
+      const bStart = b.timeSlot ? getMinutes(b.timeSlot.split('-')[0]) : 0;
+
+      return aStart - bStart;
+    });
+  };
+
+  // Format batch division display
+  const formatBatchDivision = (batchDivision) => {
+    if (!batchDivision) return '';
+    return batchDivision;
+  };
+
+  // Get subject/faculty display text
+  const getDisplayText = (item) => {
+    if (!item) return '';
+    if (typeof item === 'object') {
+      return item.subjectCode || item.code || item.name || '';
+    }
+    return item;
+  };
+
+  // Filter classrooms by type
+  const filteredClassrooms = scheduleEntry.type === 'Lab'
+    ? classrooms.filter(c => c.type === 'Lab')
+    : classrooms.filter(c => c.type !== 'Lab');
+
+  // Get batch options
+  const selectedBatch = batches.find(b => b._id === newTimetable.batch);
+  const batchOptions = selectedBatch ? getBatchOptions(selectedBatch.totalStudents || 0) : [];
+
+  // Check if current type requires batch division
+  const requiresBatchDivision = batchDivisionRequiredTypes.includes(scheduleEntry.type);
+  const parallelRequiresBatchDivision = batchDivisionRequiredTypes.includes(parallelEntry.type);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
@@ -160,967 +921,912 @@ const CreateTimetable = () => {
     );
   }
 
-  // Error state
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
-        <div className="text-center text-red-600">
-          <p>{error}</p>
-          <button 
-            onClick={fetchTimetables}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        
-        {/* Header Section */}
+    <div className="min-h-screen bg-gray-50">
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
         <div className="pt-24 text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            Timetables
+            Timetable Management
           </h1>
           <p className="text-lg text-gray-600">
-            Manage and generate academic schedules
+            Create and manage class schedules for different batches
           </p>
         </div>
 
-        {/* Search and Filters Section */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-2">
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-700">{error}</p>
+          </div>
+        )}
+
+        {/* Search and Filters Section - Updated UI */}
+        <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Search batches...
+              </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <i className="fas fa-search text-gray-400"></i>
                 </div>
                 <input
                   type="text"
-                  placeholder="Search timetables..."
+                  placeholder="Search by name, code or department..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && fetchTimetables()}
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
 
             <div>
-              <select 
-                value={statusFilter} 
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Semester
+              </label>
+              <select
+                value={selectedSemester}
+                onChange={(e) => setSelectedSemester(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {statusOptions.map(option => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <select 
-                value={departmentFilter} 
-                onChange={(e) => setDepartmentFilter(e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                {departmentOptions.map(option => (
-                  <option key={option} value={option}>{option}</option>
+                <option value="All Semesters">All Semesters</option>
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                  <option key={sem} value={`Semester ${sem}`}>
+                    Semester {sem}
+                  </option>
                 ))}
               </select>
             </div>
           </div>
 
           <div className="mt-4 flex justify-between items-center">
-            <div className="flex gap-2">
-              <button 
-                onClick={handleClearFilters}
-                className="px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            <button
+              onClick={clearFilters}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
+            >
+              Clear Filters
+            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
               >
-                Clear Filters
-              </button>
-              <button 
-                onClick={fetchTimetables}
-                className="px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <i className="fas fa-sync-alt mr-2"></i>
-                Refresh
+                <i className="fas fa-plus mr-2"></i>
+                New Timetable
               </button>
             </div>
-            
-            <button 
-              onClick={() => {
-                setEditingTimetable(null);
-                setShowGenerateModal(true);
-              }}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center"
-            >
-              <i className="fas fa-plus mr-2"></i>
-              Generate New Timetable
-            </button>
           </div>
         </div>
 
-        <div className="border-t border-gray-200 my-6"></div>
+        {/* Timetables Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredTimetables.map((timetable) => {
 
-        {/* Timetable Cards */}
-        <div className="space-y-6">
-          {filteredTimetables.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-lg shadow-md">
-              <i className="fas fa-calendar-times text-4xl text-gray-300 mb-4"></i>
-              <h3 className="text-xl font-semibold text-gray-600">No timetables found</h3>
-              <p className="text-gray-500">Try adjusting your search or filters</p>
-            </div>
-          ) : (
-            filteredTimetables.map(timetable => (
-              <div key={timetable._id || timetable.id} className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
-                <div className="p-6">
-                  {/* Header Section */}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                    <div className="mb-3 sm:mb-0">
-                      <h3 className="text-xl font-semibold text-gray-900">{timetable.title}</h3>
+            const batchInfo =
+              typeof timetable.batch === "object"
+                ? timetable.batch
+                : batches.find(b => b._id === timetable.batch);
+            console.log("SEM DATA:", batchInfo?.semesters);
+            const batchName = getBatchName(batchInfo);
+            const batchDepartment = batchInfo?.department || 'N/A';
+
+            // ✅ Semester (REAL)
+            const batchSemester =
+              batchInfo?.currentSemester ||
+              timetable.semester ||
+              1;
+
+            // ✅ Academic Year (REAL)
+            const batchAcademicYear =
+              batchInfo?.academicYear ||
+              timetable.academicYear ||
+              "N/A";
+
+            // ✅ Students (REAL)
+            const totalStudents =
+              batchInfo?.totalStudents ||
+              timetable.totalStudents ||
+              0;
+
+            let subjectCount = 0;
+
+            if (batchInfo?.semesters?.length > 0) {
+              const semData = batchInfo.semesters.find(
+                s => s.semesterNumber === batchSemester
+              );
+
+              if (semData?.subjects?.length > 0) {
+                // ✅ only valid subjects count karo
+                subjectCount = semData.subjects.filter(s => s.subject).length;
+              }
+            }
+
+            // ✅ fallback (VERY IMPORTANT 🔥)
+            if (subjectCount === 0 && batchSubjects?.length > 0) {
+              subjectCount = batchSubjects.length;
+            }
+
+            return (
+              <div
+                key={timetable._id}
+                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
+              >
+                {/* Header */}
+                <div
+                  className={`bg-gradient-to-r ${timetable.status === "Published"
+                    ? "from-green-500 to-green-600"
+                    : "from-blue-500 to-blue-600"
+                    } p-4`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-xl font-bold text-white">
+                        {timetable.name}
+                      </h3>
+                      <p className="text-white text-sm mt-1 opacity-90">
+                        {batchName} • Semester {batchSemester}
+                      </p>
                     </div>
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(timetable.status)}`}>
-                      <i className={`fas ${getStatusIcon(timetable.status)} mr-2`}></i>
+
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${timetable.status === "Published"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-yellow-100 text-yellow-800"
+                        }`}
+                    >
                       {timetable.status}
                     </span>
                   </div>
+                </div>
 
-                  {/* Department and Date */}
-                  <div className="mb-4">
-                    <p className="text-gray-700 flex items-center">
-                      <i className="fas fa-university mr-2 text-gray-400"></i>
-                      {timetable.department}
-                    </p>
-                    <p className="text-gray-500 text-sm flex items-center mt-1">
-                      <i className="fas fa-calendar-alt mr-2"></i>
-                      {timetable.generatedDate ? `Generated: ${timetable.generatedDate}` : 'No date specified'}
-                    </p>
+                {/* ✅ Updated Card Body (REAL DATA) */}
+                <div className="p-5 space-y-4">
+
+                  {/* Academic Year */}
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <span className="text-sm text-gray-600">Academic Year</span>
+                    <span className="font-bold text-blue-600">
+                      {batchAcademicYear}
+                    </span>
                   </div>
 
-                  {/* Notes */}
-                  {timetable.notes && (
-                    <div className="mb-4 p-3 bg-blue-50 rounded-md">
-                      <p className="text-gray-700 text-sm">
-                        <strong className="flex items-center">
-                          <i className="fas fa-sticky-note mr-2"></i>
-                          Notes:
-                        </strong> 
-                        <span className="ml-6">{timetable.notes}</span>
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="flex flex-wrap gap-3">
-                    <button 
-                      onClick={() => handleViewGrid(timetable)}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      <i className="fas fa-th mr-2"></i>
-                      View Grid
-                    </button>
-                    
-                    {timetable.hasDownload && (
-                      <button 
-                        onClick={() => handleDownloadPDF(timetable)}
-                        className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        <i className="fas fa-download mr-2"></i>
-                        Download
-                      </button>
-                    )}
-                    
-                    <button 
-                      onClick={() => handleEditTimetable(timetable)}
-                      className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      <i className="fas fa-edit mr-2"></i>
-                      Edit
-                    </button>
-                    
-                    <button 
-                      onClick={() => handleDeleteTimetable(timetable._id || timetable.id)}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                    >
-                      <i className="fas fa-trash mr-2"></i>
-                      Delete
-                    </button>
+                  {/* Students */}
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <span className="text-sm text-gray-600">Students</span>
+                    <span className="font-bold text-green-600">
+                      {totalStudents}
+                    </span>
                   </div>
+
+                  {/* Department */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Department</span>
+                    <span className="font-bold text-gray-800">
+                      {batchDepartment}
+                    </span>
+                  </div>
+
+                </div>
+
+                {/* Footer */}
+                <div className="p-4 bg-gray-50 border-t flex justify-between gap-2">
+                  <button
+                    onClick={() => viewTimetable(timetable)}
+                    className="flex-1 px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 text-sm"
+                  >
+                    View
+                  </button>
+
+                  <button
+                    onClick={() => editTimetable(timetable)}
+                    className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm"
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    onClick={() => deleteTimetable(timetable._id)}
+                    className="flex-1 px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 text-sm"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
-            ))
-          )}
+            );
+          })}
         </div>
+
+
+        {/* Empty State */}
+        {filteredTimetables.length === 0 && timetables.length > 0 && (
+          <div className="text-center py-12">
+            <i className="fas fa-search text-6xl text-gray-300 mb-4"></i>
+            <h3 className="text-xl font-semibold text-gray-600">No timetables match your search</h3>
+            <p className="text-gray-500">Try adjusting your search or filters</p>
+          </div>
+        )}
+
+        {/* No Timetables State */}
+        {timetables.length === 0 && !error && (
+          <div className="text-center py-12">
+            <i className="fas fa-calendar-times text-6xl text-gray-300 mb-4"></i>
+            <h3 className="text-xl font-semibold text-gray-600">No timetables yet</h3>
+            <p className="text-gray-500">Create your first timetable using the button above</p>
+          </div>
+        )}
       </div>
 
-      {/* Generate New Timetable Modal */}
-      {showGenerateModal && (
-        <GenerateTimetableModal 
-          onClose={() => {
-            setShowGenerateModal(false);
-            setEditingTimetable(null);
-          }}
-          onSave={handleSaveTimetable}
-          editingTimetable={editingTimetable}
-        />
-      )}
-
-      {/* Timetable Grid View Modal */}
-      {showGridView && selectedTimetable && (
-        <TimetableGridView 
-          timetable={selectedTimetable}
-          onClose={() => {
-            setShowGridView(false);
-            setSelectedTimetable(null);
-          }}
-        />
-      )}
-    </div>
-  );
-};
-
-// Generate Timetable Modal Component with API integration
-const GenerateTimetableModal = ({ onClose, onSave, editingTimetable }) => {
-  const [currentStep, setCurrentStep] = useState('basic-info');
-  const [timetableInfo, setTimetableInfo] = useState(editingTimetable ? {
-    title: editingTimetable.title || '',
-    department: editingTimetable.department || '',
-    status: editingTimetable.status || 'Draft',
-    notes: editingTimetable.notes || '',
-    generatedDate: editingTimetable.generatedDate || new Date().toLocaleDateString()
-  } : {
-    title: '',
-    department: '',
-    status: 'Draft',
-    notes: '',
-    generatedDate: new Date().toLocaleDateString()
-  });
-
-  const [selectedSubjects, setSelectedSubjects] = useState([]);
-  const [selectedClassrooms, setSelectedClassrooms] = useState([]);
-  const [selectedFaculty, setSelectedFaculty] = useState([]);
-  const [selectedBatches, setSelectedBatches] = useState([]);
-  const [loadingResources, setLoadingResources] = useState(false);
-  const [resourcesError, setResourcesError] = useState(null);
-
-  const [subjectsData, setSubjectsData] = useState([]);
-  const [facultyData, setFacultyData] = useState([]);
-  const [classroomsData, setClassroomsData] = useState([]);
-  const [batchesData, setBatchesData] = useState([]);
-
-  const [preferences, setPreferences] = useState({
-    maxHoursPerDay: 6,
-    breakDuration: 60,
-    workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-    optimizationOptions: ['Avoid back-to-back lab sessions', 'Balance faculty workload', 'Prioritize core courses in prime time slots'],
-    startTime: '09:00',
-    endTime: '17:00'
-  });
-
-  const [constraints, setConstraints] = useState({
-    facultyUnavailability: '',
-    roomRestrictions: '',
-    specialRequirements: ''
-  });
-
-  const steps = ['basic-info', 'resources', 'preferences', 'constraints'];
-
-  // Fetch resources data
-  useEffect(() => {
-    if (currentStep === 'resources' && subjectsData.length === 0) {
-      fetchResources();
-    }
-  }, [currentStep]);
-
-  const fetchResources = async () => {
-    try {
-      setLoadingResources(true);
-      setResourcesError(null);
-      
-      // Fetch all resources concurrently
-      const [subjectsRes, facultyRes, classroomsRes, batchesRes] = await Promise.all([
-        // You'll need to create these API endpoints or use existing ones
-        // For now, we'll use empty arrays as placeholders
-        Promise.resolve({ data: [] }),
-        Promise.resolve({ data: [] }),
-        Promise.resolve({ data: [] }),
-        Promise.resolve({ data: [] })
-      ]);
-      
-      setSubjectsData(subjectsRes.data || []);
-      setFacultyData(facultyRes.data || []);
-      setClassroomsData(classroomsRes.data || []);
-      setBatchesData(batchesRes.data || []);
-    } catch (err) {
-      console.error('Error fetching resources:', err);
-      setResourcesError('Failed to load resources. Please try again.');
-    } finally {
-      setLoadingResources(false);
-    }
-  };
-
-  const handleInputChange = (field, value) => {
-    setTimetableInfo(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handlePreferencesChange = (field, value) => {
-    setPreferences(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleConstraintsChange = (field, value) => {
-    setConstraints(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const toggleSelection = (type, id) => {
-    switch (type) {
-      case 'subject':
-        setSelectedSubjects(prev => 
-          prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-        );
-        break;
-      case 'classroom':
-        setSelectedClassrooms(prev => 
-          prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-        );
-        break;
-      case 'faculty':
-        setSelectedFaculty(prev => 
-          prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-        );
-        break;
-      case 'batch':
-        setSelectedBatches(prev => 
-          prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-        );
-        break;
-      default:
-        break;
-    }
-  };
-
-  const toggleWorkingDay = (day) => {
-    setPreferences(prev => ({
-      ...prev,
-      workingDays: prev.workingDays.includes(day)
-        ? prev.workingDays.filter(d => d !== day)
-        : [...prev.workingDays, day]
-    }));
-  };
-
-  const toggleOptimizationOption = (option) => {
-    setPreferences(prev => ({
-      ...prev,
-      optimizationOptions: prev.optimizationOptions.includes(option)
-        ? prev.optimizationOptions.filter(o => o !== option)
-        : [...prev.optimizationOptions, option]
-    }));
-  };
-
-  const handleSave = () => {
-    // Prepare data for API
-    const timetableData = {
-      ...timetableInfo,
-      preferences,
-      constraints,
-      selectedSubjects,
-      selectedClassrooms,
-      selectedFaculty,
-      selectedBatches
-    };
-    
-    onSave(timetableData);
-  };
-
-  const getSelectedCount = (type) => {
-    switch (type) {
-      case 'subjects': return selectedSubjects.length;
-      case 'classrooms': return selectedClassrooms.length;
-      case 'faculty': return selectedFaculty.length;
-      case 'batches': return selectedBatches.length;
-      default: return 0;
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6">
-          <div className="flex justify-between items-center">
-            <div>
+      {/* Create/Edit Timetable Modal - Keep existing modal code */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-blue-600 p-6">
               <h2 className="text-2xl font-bold text-white">
-                {editingTimetable ? 'Edit Timetable' : 'Generate New Timetable'}
+                {newTimetable._id ? 'Edit Timetable' : 'Create New Timetable'}
               </h2>
-              <p className="text-blue-100 mt-1">
-                {editingTimetable ? 'Update timetable details' : 'Configure settings and generate optimized schedules'}
-              </p>
             </div>
-            <button 
-              onClick={onClose}
-              className="text-white hover:text-blue-200 text-xl"
-            >
-              <i className="fas fa-times"></i>
-            </button>
-          </div>
-          
-          {/* Step Indicator */}
-          <div className="mt-4 flex space-x-2">
-            {steps.map((step, index) => (
-              <div
-                key={step}
-                className={`flex-1 h-2 rounded-full ${
-                  currentStep === step ? 'bg-white' : 'bg-blue-400'
-                }`}
-              />
-            ))}
-          </div>
-        </div>
 
-        {/* Content */}
-        <div className="p-6 max-h-[60vh] overflow-y-auto">
-          {/* Basic Info Step */}
-          {currentStep === 'basic-info' && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Timetable Information</h3>
-              <p className="text-gray-600 mb-6">Basic details about the timetable</p>
-              
-              <div className="space-y-4">
+            <div className="p-6">
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Timetable Name *
                   </label>
                   <input
                     type="text"
-                    value={timetableInfo.title}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    placeholder="e.g., CS Department Fall 2024"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
+                    name="name"
+                    value={newTimetable.name}
+                    onChange={handleInputChange}
+                    placeholder="e.g., CSE Section (A) Semester 1"
+                    className="w-full px-3 py-2 border rounded-md"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Department *
+                    Select Batch *
                   </label>
                   <select
-                    value={timetableInfo.department}
-                    onChange={(e) => handleInputChange('department', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
+                    name="batch"
+                    value={newTimetable.batch}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border rounded-md"
                   >
-                    <option value="">Select department</option>
-                    <option value="Computer Science">Computer Science</option>
-                    <option value="Electrical Engineering">Electrical Engineering</option>
-                    <option value="Mechanical Engineering">Mechanical Engineering</option>
-                    <option value="Civil Engineering">Civil Engineering</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={timetableInfo.status}
-                    onChange={(e) => handleInputChange('status', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="Draft">Draft</option>
-                    <option value="Approved">Approved</option>
-                    <option value="Pending Review">Pending Review</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes
-                  </label>
-                  <textarea
-                    value={timetableInfo.notes}
-                    onChange={(e) => handleInputChange('notes', e.target.value)}
-                    placeholder="Add any notes about this timetable..."
-                    rows="3"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Resources Step */}
-          {currentStep === 'resources' && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Resources</h3>
-              
-              {loadingResources ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                  <p className="mt-4 text-gray-600">Loading resources...</p>
-                </div>
-              ) : resourcesError ? (
-                <div className="text-center py-8 text-red-600">
-                  <p>{resourcesError}</p>
-                  <button 
-                    onClick={fetchResources}
-                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                  >
-                    Retry
-                  </button>
-                </div>
-              ) : (
-                <>
-                  {/* Subjects */}
-                  <div className="mb-6">
-                    <h4 className="font-medium text-gray-700 mb-3">
-                      Subjects ({getSelectedCount('subjects')} selected)
-                    </h4>
-                    <p className="text-gray-600 mb-3">Select subjects to include in the timetable</p>
-                    {subjectsData.length === 0 ? (
-                      <p className="text-gray-500 italic">No subjects available. Add subjects first.</p>
-                    ) : (
-                      <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3">
-                        {subjectsData.map(subject => (
-                          <label key={subject._id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
-                            <input
-                              type="checkbox"
-                              checked={selectedSubjects.includes(subject._id)}
-                              onChange={() => toggleSelection('subject', subject._id)}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className="flex-1">
-                              <span className="block font-medium">{subject.name || subject.title}</span>
-                              <span className="block text-sm text-gray-500">
-                                {subject.code} - {subject.department} - {subject.credits || 0} credits
-                              </span>
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Classrooms */}
-                  <div className="mb-6">
-                    <h4 className="font-medium text-gray-700 mb-3">
-                      Classrooms ({getSelectedCount('classrooms')} selected)
-                    </h4>
-                    {classroomsData.length === 0 ? (
-                      <p className="text-gray-500 italic">No classrooms available. Add classrooms first.</p>
-                    ) : (
-                      <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3">
-                        {classroomsData.map(classroom => (
-                          <label key={classroom._id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
-                            <input
-                              type="checkbox"
-                              checked={selectedClassrooms.includes(classroom._id)}
-                              onChange={() => toggleSelection('classroom', classroom._id)}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className="flex-1">
-                              <span className="block font-medium">{classroom.name || classroom.title}</span>
-                              <span className="block text-sm text-gray-500">
-                                {classroom.code} - Capacity: {classroom.capacity || 'N/A'}
-                              </span>
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Faculty */}
-                  <div className="mb-6">
-                    <h4 className="font-medium text-gray-700 mb-3">
-                      Faculty ({getSelectedCount('faculty')} selected)
-                    </h4>
-                    <p className="text-gray-600 mb-3">Select faculty members to assign</p>
-                    {facultyData.length === 0 ? (
-                      <p className="text-gray-500 italic">No faculty available. Add faculty first.</p>
-                    ) : (
-                      <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3">
-                        {facultyData.map(faculty => (
-                          <label key={faculty._id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
-                            <input
-                              type="checkbox"
-                              checked={selectedFaculty.includes(faculty._id)}
-                              onChange={() => toggleSelection('faculty', faculty._id)}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className="flex-1">
-                              <span className="block font-medium">{faculty.name}</span>
-                              <span className="block text-sm text-gray-500">
-                                {faculty.department || 'No department'}
-                              </span>
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Student Batches */}
-                  <div>
-                    <h4 className="font-medium text-gray-700 mb-3">
-                      Student Batches ({getSelectedCount('batches')} selected)
-                    </h4>
-                    {batchesData.length === 0 ? (
-                      <p className="text-gray-500 italic">No batches available. Add batches first.</p>
-                    ) : (
-                      <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3">
-                        {batchesData.map(batch => (
-                          <label key={batch._id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
-                            <input
-                              type="checkbox"
-                              checked={selectedBatches.includes(batch._id)}
-                              onChange={() => toggleSelection('batch', batch._id)}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className="flex-1">
-                              <span className="block font-medium">{batch.name || batch.title}</span>
-                              <span className="block text-sm text-gray-500">
-                                {batch.code} - {batch.department}
-                              </span>
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Preferences Step */}
-          {currentStep === 'preferences' && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Scheduling Preferences</h3>
-              <p className="text-gray-600 mb-6">Configure how the timetable should be generated</p>
-              
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Max Hours Per Day
-                  </label>
-                  <input
-                    type="number"
-                    value={preferences.maxHoursPerDay}
-                    onChange={(e) => handlePreferencesChange('maxHoursPerDay', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Break Duration (minutes)
-                  </label>
-                  <input
-                    type="number"
-                    value={preferences.breakDuration}
-                    onChange={(e) => handlePreferencesChange('breakDuration', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">Working Days</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
-                    <label key={day} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={preferences.workingDays.includes(day)}
-                        onChange={() => toggleWorkingDay(day)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700">{day}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">Optimization Options</label>
-                <div className="space-y-2">
-                  {['Avoid back-to-back lab sessions', 'Balance faculty workload', 'Prioritize core courses in prime time slots'].map(option => (
-                    <label key={option} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={preferences.optimizationOptions.includes(option)}
-                        onChange={() => toggleOptimizationOption(option)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700">{option}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6 mt-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Start Time
-                  </label>
-                  <input
-                    type="time"
-                    value={preferences.startTime}
-                    onChange={(e) => handlePreferencesChange('startTime', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    End Time
-                  </label>
-                  <input
-                    type="time"
-                    value={preferences.endTime}
-                    onChange={(e) => handlePreferencesChange('endTime', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Constraints Step */}
-          {currentStep === 'constraints' && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Scheduling Constraints</h3>
-              <p className="text-gray-600 mb-6">Specify any restrictions or special requirements</p>
-              
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Faculty Unavailability
-                  </label>
-                  <textarea
-                    value={constraints.facultyUnavailability}
-                    onChange={(e) => handleConstraintsChange('facultyUnavailability', e.target.value)}
-                    placeholder="e.g., Dr. Smith unavailable on Mondays, Prof. Johnson only available in mornings"
-                    rows="3"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Room Restrictions
-                  </label>
-                  <textarea
-                    value={constraints.roomRestrictions}
-                    onChange={(e) => handleConstraintsChange('roomRestrictions', e.target.value)}
-                    placeholder="e.g., Lab A101 only for computer science courses, Room B205 under maintenance on Fridays"
-                    rows="3"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Special Requirements
-                  </label>
-                  <textarea
-                    value={constraints.specialRequirements}
-                    onChange={(e) => handleConstraintsChange('specialRequirements', e.target.value)}
-                    placeholder="e.g., Physics lab requires 2-hour continuous slots, Mathematics tutorials should follow lectures"
-                    rows="3"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer Actions */}
-        <div className="bg-gray-50 px-6 py-4 flex justify-between">
-          <div>
-            {currentStep !== 'basic-info' && (
-              <button
-                onClick={() => {
-                  const currentIndex = steps.indexOf(currentStep);
-                  if (currentIndex > 0) setCurrentStep(steps[currentIndex - 1]);
-                }}
-                className="px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
-              >
-                <i className="fas fa-arrow-left mr-2"></i>
-                Previous
-              </button>
-            )}
-          </div>
-          
-          <div className="flex space-x-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
-            >
-              Cancel
-            </button>
-            
-            {currentStep === 'constraints' ? (
-              <button
-                onClick={handleSave}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-              >
-                <i className="fas fa-save mr-2"></i>
-                {editingTimetable ? 'Update Timetable' : 'Generate Timetable'}
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  const currentIndex = steps.indexOf(currentStep);
-                  if (currentIndex < steps.length - 1) setCurrentStep(steps[currentIndex + 1]);
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Next
-                <i className="fas fa-arrow-right ml-2"></i>
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Timetable Grid View Component
-const TimetableGridView = ({ timetable, onClose }) => {
-  const [gridData, setGridData] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (timetable) {
-      fetchGridData();
-    }
-  }, [timetable]);
-
-  const fetchGridData = async () => {
-    try {
-      setLoading(true);
-      // Fetch timetable grid data from API
-      // This would be a separate API endpoint like timetableAPI.getGrid(timetable._id)
-      // For now, use the data from timetable or show placeholder
-      
-      if (timetable.gridData) {
-        setGridData(timetable.gridData);
-      } else {
-        // Create default grid structure
-        setGridData({
-          days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-          timeSlots: ['09:00-10:00', '10:00-11:00', '11:00-12:00', '12:00-13:00', '13:00-14:00', '14:00-15:00'],
-          schedule: Array(5).fill().map(() => Array(6).fill('No schedule data'))
-        });
-      }
-    } catch (err) {
-      console.error('Error fetching grid data:', err);
-      setGridData({
-        days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-        timeSlots: ['09:00-10:00', '10:00-11:00', '11:00-12:00', '12:00-13:00', '13:00-14:00', '14:00-15:00'],
-        schedule: Array(5).fill().map(() => Array(6).fill('Error loading data'))
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!gridData) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl">
-          <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading timetable grid...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-2xl font-bold text-white">{timetable.title}</h2>
-              <p className="text-blue-100 mt-1">{timetable.department}</p>
-            </div>
-            <button 
-              onClick={onClose}
-              className="text-white hover:text-blue-200 text-xl"
-            >
-              <i className="fas fa-times"></i>
-            </button>
-          </div>
-        </div>
-
-        {/* Timetable Grid */}
-        <div className="p-6 max-h-[70vh] overflow-y-auto">
-          {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading schedule...</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse border border-gray-300">
-                <thead>
-                  <tr>
-                    <th className="border border-gray-300 bg-gray-100 p-3 font-semibold">Time/Day</th>
-                    {gridData.days.map(day => (
-                      <th key={day} className="border border-gray-300 bg-gray-100 p-3 font-semibold">{day}</th>
+                    <option value="">Select Batch</option>
+                    {batches.map(batch => (
+                      <option key={batch._id} value={batch._id}>
+                        {batch.batchName || batch.name} - Semester {batch.currentSemester || 1} ({batch.totalStudents || 0} students)
+                      </option>
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {gridData.timeSlots.map((timeSlot, timeIndex) => (
-                    <tr key={timeSlot}>
-                      <td className="border border-gray-300 bg-gray-50 p-3 font-medium">{timeSlot}</td>
-                      {gridData.days.map((day, dayIndex) => (
-                        <td key={day} className="border border-gray-300 p-3">
-                          {gridData.schedule[dayIndex]?.[timeIndex] || 'Free'}
-                        </td>
+                  </select>
+                </div>
+              </div>
+
+              {/* UPDATED Batch Info Section - Simple format with Subjects count and Semester */}
+              {selectedBatchDetails && (
+                <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+                  <h4 className="font-medium text-blue-800 mb-2">Batch Information</h4>
+
+                  {/* Academic Year */}
+                  <p className="text-sm text-blue-600">
+                    <span className="font-semibold">Academic Year:</span> {selectedBatchDetails.academicYear || getCurrentAcademicYear()}
+                  </p>
+
+                  {/* Semester and Department */}
+                  <p className="text-sm text-blue-600 mt-1">
+                    <span className="font-semibold">Semester:</span> {selectedBatchDetails.currentSemester || 1} |
+                    <span className="font-semibold ml-1">Department:</span> {selectedBatchDetails.department}
+                  </p>
+
+                  {/* Subjects Count - Simplified */}
+                  <p className="text-sm text-blue-600 mt-1">
+                    <span className="font-semibold">Subjects:</span> {batchSubjects.length}
+                  </p>
+
+                  {/* Batch Distribution */}
+                  <div className="mt-2 pt-2 border-t border-blue-200">
+                    <p className="text-sm font-semibold text-blue-700">Batch Distribution:</p>
+                    <p className="text-sm text-blue-600">
+                      B1: 25 students | B2: 25 students | B3: {Math.max(0, (selectedBatchDetails.totalStudents || 0) - 50)} students
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Add Class Form */}
+              <div className="border rounded-lg p-6 mb-6">
+                <h3 className="text-lg font-semibold mb-4">Add Class Schedule</h3>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Day</label>
+                    <select
+                      name="day"
+                      value={scheduleEntry.day}
+                      onChange={handleScheduleChange}
+                      className="w-full px-3 py-2 border rounded-md"
+                    >
+                      {daysOfWeek.map(day => (
+                        <option key={day} value={day}>{day}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Time Slot</label>
+                    <input
+                      type="text"
+                      name="timeSlot"
+                      value={scheduleEntry.timeSlot}
+                      onChange={handleScheduleChange}
+                      placeholder="09:00-10:30"
+                      className="w-full px-3 py-2 border rounded-md"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Format: HH:MM-HH:MM</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                    <select
+                      name="subject"
+                      value={scheduleEntry.subject}
+                      onChange={handleScheduleChange}
+                      className="w-full px-3 py-2 border rounded-md"
+                      disabled={!newTimetable.batch || batchSubjects.length === 0}
+                    >
+                      <option value="">
+                        {!newTimetable.batch
+                          ? 'Select batch first'
+                          : batchSubjects.length === 0
+                            ? 'No subjects in current semester'
+                            : 'Select Subject'}
+                      </option>
+                      {batchSubjects.map(item => {
+                        const subject = item?.subject || item;
+                        if (!subject) return null;
+
+                        const subjectCode =
+                          subject.subjectCode || subject.code || subject.name || "Unknown";
+                        const subjectName = subject.name || "";
+
+                        return (
+                          <option key={subject._id} value={subject._id}>
+                            {subjectCode} {subjectName && `- ${subjectName}`}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    {newTimetable.batch && batchSubjects.length === 0 && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        No subjects assigned to current semester. Please add subjects to the batch first.
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Faculty</label>
+                    <select
+                      name="faculty"
+                      value={scheduleEntry.faculty}
+                      onChange={handleScheduleChange}
+                      className="w-full px-3 py-2 border rounded-md"
+                      disabled={!scheduleEntry.subject}
+                    >
+                      <option value="">
+                        {!scheduleEntry.subject ? 'Select subject first' : 'Select Faculty'}
+                      </option>
+                      {filteredFaculty.map(faculty => (
+                        <option key={faculty._id} value={faculty._id}>
+                          {getFacultyDisplayName(faculty)} - {faculty.department}
+                        </option>
+                      ))}
+                    </select>
+                    {scheduleEntry.subject && filteredFaculty.length === 0 && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        No faculty assigned to this subject
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Classroom</label>
+                    <select
+                      name="classroom"
+                      value={scheduleEntry.classroom}
+                      onChange={handleScheduleChange}
+                      className="w-full px-3 py-2 border rounded-md"
+                    >
+                      <option value="">Select Classroom</option>
+                      {classrooms.map(classroom => (
+                        <option key={classroom._id} value={classroom._id}>
+                          {classroom.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <select
+                      name="type"
+                      value={scheduleEntry.type}
+                      onChange={handleScheduleChange}
+                      className="w-full px-3 py-2 border rounded-md"
+                    >
+                      <option value="Theory">Theory</option>
+                      <option value="Core">Core</option>
+                      <option value="Lab">Lab</option>
+                      <option value="Elective">Elective</option>
+                      <option value="Project">Project</option>
+                      <option value="Workshop">Workshop</option>
+                      <option value="Seminar">Seminar</option>
+                    </select>
+                  </div>
+
+                  {/* Batch Division - Only show for Lab */}
+                  {requiresBatchDivision && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Batch Division <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        name="batchDivision"
+                        value={scheduleEntry.batchDivision}
+                        onChange={handleScheduleChange}
+                        className="w-full px-3 py-2 border rounded-md"
+                      >
+                        <option value="">Select Batch Division</option>
+                        {selectedBatchDetails?.totalStudents > 0 && (
+                          <>
+                            <option value="B1">B1 (25 students)</option>
+                            {selectedBatchDetails.totalStudents > 25 && (
+                              <option value="B2">B2 (25 students)</option>
+                            )}
+                            {selectedBatchDetails.totalStudents > 50 && (
+                              <option value="B3">B3 ({selectedBatchDetails.totalStudents - 50} students)</option>
+                            )}
+                          </>
+                        )}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Parallel Classes Section */}
+                <div className="mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setShowParallelForm(!showParallelForm)}
+                    className="text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    {showParallelForm ? '− Hide Parallel Classes' : '+ Add Parallel Classes'}
+                  </button>
+
+                  {showParallelForm && (
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                      <h4 className="font-medium mb-3">Add Parallel Class</h4>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div>
+                          <select
+                            name="subject"
+                            value={parallelEntry.subject}
+                            onChange={handleParallelChange}
+                            className="w-full px-3 py-2 border rounded-md"
+                            disabled={!newTimetable.batch || batchSubjects.length === 0}
+                          >
+                            <option value="">
+                              {!newTimetable.batch
+                                ? 'Select batch first'
+                                : batchSubjects.length === 0
+                                  ? 'No subjects in current semester'
+                                  : 'Select Subject'}
+                            </option>
+                            {batchSubjects.map(item => {
+                              const subject = item?.subject || item;
+                              if (!subject) return null;
+
+                              const subjectCode =
+                                subject.subjectCode || subject.code || subject.name || "Unknown";
+                              const subjectName = subject.name || "";
+
+                              return (
+                                <option key={subject._id} value={subject._id}>
+                                  {subjectCode} {subjectName && `- ${subjectName}`}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+
+                        <div>
+                          <select
+                            name="faculty"
+                            value={parallelEntry.faculty}
+                            onChange={handleParallelChange}
+                            className="w-full px-3 py-2 border rounded-md"
+                            disabled={!parallelEntry.subject}
+                          >
+                            <option value="">
+                              {!parallelEntry.subject ? 'Select subject first' : 'Select Faculty'}
+                            </option>
+                            {filteredFaculty.map(faculty => (
+                              <option key={faculty._id} value={faculty._id}>
+                                {getFacultyDisplayName(faculty)} - {faculty.department}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <select
+                            name="classroom"
+                            value={parallelEntry.classroom}
+                            onChange={handleParallelChange}
+                            className="w-full px-3 py-2 border rounded-md"
+                          >
+                            <option value="">Select Classroom</option>
+                            {classrooms.map(classroom => (
+                              <option key={classroom._id} value={classroom._id}>
+                                {classroom.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <select
+                            name="type"
+                            value={parallelEntry.type}
+                            onChange={handleParallelChange}
+                            className="w-full px-3 py-2 border rounded-md"
+                          >
+                            <option value="Theory">Theory</option>
+                            <option value="Core">Core</option>
+                            <option value="Lab">Lab</option>
+                            <option value="Elective">Elective</option>
+                            <option value="Project">Project</option>
+                            <option value="Workshop">Workshop</option>
+                            <option value="Seminar">Seminar</option>
+                          </select>
+                        </div>
+
+                        {/* Batch Division for Parallel - Only show for Lab */}
+                        {parallelRequiresBatchDivision && (
+                          <div>
+                            <select
+                              name="batchDivision"
+                              value={parallelEntry.batchDivision}
+                              onChange={handleParallelChange}
+                              className="w-full px-3 py-2 border rounded-md"
+                            >
+                              <option value="">Select Batch Division</option>
+                              {selectedBatchDetails?.totalStudents > 0 && (
+                                <>
+                                  <option value="B1">B1 (25 students)</option>
+                                  {selectedBatchDetails.totalStudents > 25 && (
+                                    <option value="B2">B2 (25 students)</option>
+                                  )}
+                                  {selectedBatchDetails.totalStudents > 50 && (
+                                    <option value="B3">B3 ({selectedBatchDetails.totalStudents - 50} students)</option>
+                                  )}
+                                </>
+                              )}
+                            </select>
+                          </div>
+                        )}
+
+                        <div>
+                          <button
+                            onClick={addParallelClass}
+                            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Display Added Parallel Classes */}
+                      {parallelClasses.length > 0 && (
+                        <div className="mt-4">
+                          <h5 className="font-medium mb-2">Added Parallel Classes:</h5>
+                          <div className="space-y-2">
+                            {parallelClasses.map((pc) => (
+                              <div key={pc.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                                <span className="text-sm">
+                                  {pc.subject.code} {pc.batchDivision && `(${pc.batchDivision})`} - {pc.faculty.name}
+                                </span>
+                                <button
+                                  onClick={() => removeParallelClass(pc.id)}
+                                  className="text-red-500 hover:text-red-700"
+                                >
+                                  <i className="fas fa-times"></i>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={addScheduleEntry}
+                  disabled={!scheduleEntry.timeSlot || (requiresBatchDivision && !scheduleEntry.batchDivision)}
+                  className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 w-full"
+                >
+                  Add to Schedule {parallelClasses.length > 0 && `(+${parallelClasses.length} parallel classes)`}
+                </button>
+              </div>
+
+              {/* Add Break Form */}
+              <div className="border rounded-lg p-6 mb-6">
+                <h3 className="text-lg font-semibold mb-4">Add Break</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Day</label>
+                    <select
+                      name="day"
+                      value={breakEntry.day}
+                      onChange={handleBreakChange}
+                      className="w-full px-3 py-2 border rounded-md"
+                    >
+                      {daysOfWeek.map(day => (
+                        <option key={day} value={day}>{day}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Time Slot</label>
+                    <input
+                      type="text"
+                      name="timeSlot"
+                      value={breakEntry.timeSlot}
+                      onChange={handleBreakChange}
+                      placeholder="13:00-14:00"
+                      className="w-full px-3 py-2 border rounded-md"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Break Name</label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={breakEntry.name}
+                      onChange={handleBreakChange}
+                      placeholder="Lunch Break"
+                      className="w-full px-3 py-2 border rounded-md"
+                    />
+                  </div>
+
+                  <div className="flex items-end">
+                    <button
+                      onClick={addBreakEntry}
+                      className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 w-full"
+                    >
+                      Add Break
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Format: HH:MM-HH:MM (e.g., 13:00-14:00)</p>
+              </div>
+
+              {/* Schedule Preview */}
+              <div className="border rounded-lg p-6">
+                <h3 className="text-lg font-semibold mb-4">
+                  Current Schedule ({newTimetable.schedule?.length || 0} classes, {newTimetable.breaks?.length || 0} breaks)
+                </h3>
+
+                {(newTimetable.schedule?.length > 0 || newTimetable.breaks?.length > 0) ? (
+                  <div className="space-y-3">
+                    {newTimetable.schedule?.map(entry => (
+                      <div key={entry._id} className="flex items-center justify-between p-3 bg-blue-50 rounded">
+                        <div>
+                          <span className="font-medium">{entry.day} {entry.timeSlot}</span>
+                          {entry.subject && (
+                            <span className="ml-3 text-sm">
+                              {entry.subject.code} {entry.batchDivision && `(${entry.batchDivision})`}
+                            </span>
+                          )}
+                          {entry.parallelClasses?.length > 0 && (
+                            <span className="ml-2 text-xs text-purple-600">
+                              +{entry.parallelClasses.length} parallel
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => removeScheduleEntry(entry._id)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <i className="fas fa-trash"></i>
+                        </button>
+                      </div>
+                    ))}
+
+                    {newTimetable.breaks?.map(breakItem => (
+                      <div key={breakItem._id} className="flex items-center justify-between p-3 bg-orange-50 rounded">
+                        <div>
+                          <span className="font-medium">{breakItem.day} {breakItem.timeSlot}</span>
+                          <span className="ml-3 text-sm">
+                            <i className="fas fa-coffee mr-1 text-orange-600"></i>
+                            {breakItem.name}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => removeBreakEntry(breakItem._id)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <i className="fas fa-trash"></i>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-4">No classes or breaks scheduled yet</p>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setNewTimetable({
+                    name: '',
+                    batch: '',
+                    semester: '1',
+                    academicYear: getCurrentAcademicYear(),
+                    schedule: [],
+                    breaks: [],
+                    totalStudents: 0
+                  });
+                }}
+                className="px-4 py-2 border rounded-md hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createTimetable}
+                disabled={!newTimetable.schedule?.length}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              >
+                {newTimetable._id ? 'Update Timetable' : 'Create Timetable'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Timetable Modal */}
+      {showViewModal && selectedTimetable && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-blue-600 p-6">
+              <h2 className="text-2xl font-bold text-white">{selectedTimetable.name}</h2>
+              <p className="text-white text-sm mt-1">Semester {selectedTimetable.semester}</p>
+            </div>
+
+            <div className="p-6">
+
+              {/* Weekly Schedule */}
+              <div className="overflow-x-auto">
+                <table className="min-w-full border">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="px-4 py-2 border">Time</th>
+                      {daysOfWeek.map(day => (
+                        <th key={day} className="px-4 py-2 border">{day}</th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                  </thead>
+                  <tbody>
+                    {Array.from(new Set([
+                      ...(selectedTimetable.schedule || []).map(s => s.timeSlot),
+                      ...(selectedTimetable.breaks || []).map(b => b.timeSlot)
+                    ]))
+                      .filter(slot => slot)
+                      .sort((a, b) => {
+                        const getMinutes = (time) => {
+                          const [h, m] = time.split(':').map(Number);
+                          return h * 60 + m;
+                        };
+                        const aStart = getMinutes(a.split('-')[0]);
+                        const bStart = getMinutes(b.split('-')[0]);
+                        return aStart - bStart;
+                      })
+                      .map(timeSlot => (
+                        <tr key={timeSlot}>
+                          <td className="px-4 py-2 border font-medium bg-gray-50">{timeSlot}</td>
+                          {daysOfWeek.map(day => {
+                            const entries = getSortedEntriesForDay(selectedTimetable, day)
+                              .filter(e => e.timeSlot === timeSlot);
 
-        {/* Footer */}
-        <div className="bg-gray-50 px-6 py-4 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Close
-          </button>
+                            return (
+                              <td key={`${day}-${timeSlot}`} className="px-4 py-2 border align-top">
+                                {entries.length > 0 ? (
+                                  entries.map((entry, idx) => {
+                                    if (entry.type === 'break' || entry.entryType === 'break') {
+                                      return (
+                                        <div key={idx} className="p-2 bg-orange-100 rounded mb-1">
+                                          <div className="font-medium text-sm text-orange-800">
+                                            <i className="fas fa-coffee mr-1"></i>
+                                            {entry.name || 'Break'}
+                                          </div>
+                                        </div>
+                                      );
+                                    } else {
+                                      return (
+                                        <div key={idx} className="mb-2">
+                                          {entry.subject && (
+                                            <div className="p-2 bg-blue-100 rounded mb-1">
+                                              <div className="font-medium text-sm text-blue-800">
+                                                {getDisplayText(entry.subject)}
+                                                {entry.batchDivision &&
+                                                  <span className="ml-1 text-xs">({entry.batchDivision})</span>
+                                                }
+                                              </div>
+                                              <div className="text-xs text-gray-600">
+                                                {getDisplayText(entry.faculty)}
+                                              </div>
+                                            </div>
+                                          )}
+
+                                          {entry.parallelClasses && entry.parallelClasses.length > 0 && (
+                                            <div className="mt-1">
+                                              {entry.parallelClasses.map((pc, pIdx) => (
+                                                <div key={pIdx} className="p-2 bg-purple-100 rounded mt-1">
+                                                  <div className="font-medium text-sm text-purple-800">
+                                                    {getDisplayText(pc.subject)}
+                                                    {pc.batchDivision &&
+                                                      <span className="ml-1 text-xs">({pc.batchDivision})</span>
+                                                    }
+                                                  </div>
+                                                  <div className="text-xs text-gray-600">
+                                                    {getDisplayText(pc.faculty)}
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    }
+                                  })
+                                ) : (
+                                  <div className="text-gray-300 text-xs text-center">-</div>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 px-6 py-4 flex justify-end">
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="px-4 py-2 border rounded-md hover:bg-gray-100"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
 
-export default CreateTimetable;
+export default Timetable;

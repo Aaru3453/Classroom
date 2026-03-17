@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import api from "../services/api";
 
@@ -21,35 +22,196 @@ export const AuthProvider = ({ children }) => {
       setUser(res.data.user);
     } catch (err) {
       localStorage.removeItem("token");
+      localStorage.removeItem("user");
       setUser(null);
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ FIXED LOGIN (email, password)
+  // ✅ LOGIN (Updated to match your Login.jsx expectation)
   const login = async (email, password) => {
-    const res = await api.post("/auth/login", {
-      email,
-      password,
-    });
-
-    localStorage.setItem("token", res.data.token);
-    setUser(res.data.user);
-    return res.data;
+    try {
+      const response = await api.post("/auth/login", { email, password });
+      
+      console.log("Login response:", response.data);
+      
+      if (response.data.success) {
+        const { token, user } = response.data;
+        
+        // Store in localStorage
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
+        
+        // Update state
+        setUser(user);
+        
+        return { 
+          success: true, 
+          user, 
+          token 
+        };
+      }
+      
+      return { 
+        success: false, 
+        message: response.data.message 
+      };
+      
+    } catch (error) {
+      console.error("Login error:", error);
+      
+      return { 
+        success: false, 
+        message: error.response?.data?.message || "Login failed" 
+      };
+    }
   };
 
-  // ✅ REGISTER SAME PATTERN
-  const register = async (formData) => {
-    const res = await api.post("/auth/register", formData);
-    localStorage.setItem("token", res.data.token);
-    setUser(res.data.user);
-    return res.data;
+  // ✅ REGISTER (Updated)
+  const register = async (userData) => {
+    try {
+      const response = await api.post('/auth/register', userData);
+      
+      console.log("Register response:", response.data);
+      
+      if (response.data.success) {
+        const { token, user } = response.data;
+        
+        // Store in localStorage
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        // Update state
+        setUser(user);
+        
+        return { 
+          success: true,
+          user,
+          token
+        };
+      }
+      
+      return { 
+        success: false, 
+        message: response.data.message 
+      };
+      
+    } catch (error) {
+      console.error('Registration error:', error);
+      return {
+        success: false, 
+        message: error.response?.data?.message || 'Registration failed'
+      };
+    }
   };
 
+  // ✅ UPDATE PROFILE (New function)
+  const updateProfile = async (profileData) => {
+    try {
+      // Update only name and email (department and semester are read-only for users)
+      const updateData = {
+        name: profileData.name,
+        email: profileData.email
+      };
+      
+      const response = await api.put('/users/profile', updateData);
+      
+      console.log("Update profile response:", response.data);
+      
+      if (response.data.success) {
+        const updatedUser = response.data.user;
+        
+        // Update state
+        setUser(updatedUser);
+        
+        // Update localStorage
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        return { 
+          success: true,
+          user: updatedUser,
+          message: response.data.message || 'Profile updated successfully'
+        };
+      }
+      
+      return { 
+        success: false, 
+        message: response.data.message 
+      };
+      
+    } catch (error) {
+      console.error('Update profile error:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to update profile'
+      };
+    }
+  };
+
+  // ✅ CHANGE PASSWORD (New function)
+  const changePassword = async (passwordData) => {
+    try {
+      const response = await api.put('/users/change-password', passwordData);
+      
+      console.log("Change password response:", response.data);
+      
+      if (response.data.success) {
+        return { 
+          success: true,
+          message: response.data.message || 'Password changed successfully'
+        };
+      }
+      
+      return { 
+        success: false, 
+        message: response.data.message 
+      };
+      
+    } catch (error) {
+      console.error('Change password error:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to change password'
+      };
+    }
+  };
+
+  // ✅ LOGOUT
   const logout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setUser(null);
+  };
+
+  // ✅ CHECK IF USER IS AUTHENTICATED
+  const isAuthenticated = () => {
+    return !!localStorage.getItem("token");
+  };
+
+  // ✅ GET USER ROLE
+  const getUserRole = () => {
+    return user?.role;
+  };
+
+  // ✅ IS ADMIN CHECK
+  const isAdmin = () => {
+    return user?.role === 'admin';
+  };
+
+  // ✅ IS USER CHECK
+  const isUser = () => {
+    return user?.role === 'user';
+  };
+
+  // ✅ GET USER DEPARTMENT
+  const getUserDepartment = () => {
+    return user?.department;
+  };
+
+  // ✅ GET USER SEMESTER
+  const getUserSemester = () => {
+    return user?.semester;
   };
 
   useEffect(() => {
@@ -67,11 +229,20 @@ export const AuthProvider = ({ children }) => {
         setUser,
         login,
         register,
+        updateProfile,
+        changePassword,
         logout,
         loading,
+        isAuthenticated,
+        getUserRole,
+        isAdmin,
+        isUser,
+        getUserDepartment,
+        getUserSemester
       }}
     >
       {!loading && children}
     </AuthContext.Provider>
   );
 };
+

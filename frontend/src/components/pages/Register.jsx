@@ -8,7 +8,8 @@
 //     email: '',
 //     password: '',
 //     confirmPassword: '',
-//     role: 'admin'
+//     role: 'user', // Default to user
+//     department: ''
 //   });
 //   const [loading, setLoading] = useState(false);
 //   const [error, setError] = useState('');
@@ -16,11 +17,36 @@
 //   const { register } = useAuth();
 //   const navigate = useNavigate();
 
+//   // Departments array
+//   const departments = [
+//     "Computer Science Engineering",
+//     "Information Technology",
+//     "Computer Technology",
+//     "Industrial-IOT",
+//     "Artificial Intelligence",
+//     "Civil Engineering",
+//     "Electrical Engineering",
+//     "Mechanical Engineering",
+//     "Robotics"
+//   ];
+
 //   const handleChange = (e) => {
-//     setFormData({
-//       ...formData,
-//       [e.target.name]: e.target.value
-//     });
+//     const { name, value } = e.target;
+    
+//     if (name === 'role') {
+//       // If role changes to admin, clear department
+//       setFormData(prev => ({
+//         ...prev,
+//         [name]: value,
+//         department: value === 'admin' ? '' : prev.department
+//       }));
+//     } else {
+//       setFormData(prev => ({
+//         ...prev,
+//         [name]: value
+//       }));
+//     }
+    
 //     if (error) setError('');
 //   };
 
@@ -29,6 +55,7 @@
 //     setLoading(true);
 //     setError('');
 
+//     // Validations
 //     if (formData.password !== formData.confirmPassword) {
 //       setError('Passwords do not match');
 //       setLoading(false);
@@ -41,20 +68,35 @@
 //       return;
 //     }
 
+//     // Department validation only for user role
+//     if (formData.role === 'user' && !formData.department) {
+//       setError('Please select a department for user account');
+//       setLoading(false);
+//       return;
+//     }
+
 //     try {
-//       const result = await register({
+//       // Prepare data for API
+//       const userData = {
 //         name: formData.name,
 //         email: formData.email,
 //         password: formData.password,
-//         role: formData.role
-//       });
+//         role: formData.role,
+//         // Only send department if role is user
+//         department: formData.role === 'user' ? formData.department : undefined
+//       };
+      
+//       console.log("Registering user:", userData);
+      
+//       const result = await register(userData);
       
 //       if (result.success) {
 //         navigate('/dashboard');
 //       } else {
-//         setError(result.message);
+//         setError(result.message || 'Registration failed');
 //       }
 //     } catch (error) {
+//       console.error('Registration error:', error);
 //       setError('An error occurred during registration');
 //     } finally {
 //       setLoading(false);
@@ -66,9 +108,6 @@
 //       <div className="max-w-md w-full space-y-8">
 //         {/* Header */}
 //         <div className="text-center">
-//           <div className="flex justify-center items-center mb-6">
-           
-//           </div>
 //           <h2 className="text-3xl font-bold text-gray-900 mb-2">
 //             Create Account
 //           </h2>
@@ -147,14 +186,54 @@
 //                   onChange={handleChange}
 //                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none bg-white"
 //                 >
-//                   <option value="admin">Administrator</option>
 //                   <option value="user">User</option>
+//                   <option value="admin">Administrator</option>
 //                 </select>
 //                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
 //                   <i className="fas fa-chevron-down text-gray-400"></i>
 //                 </div>
 //               </div>
 //             </div>
+
+//             {/* Department Field - Only show for user role */}
+//             {formData.role === 'user' && (
+//               <div>
+//                 <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-2">
+//                   Department *
+//                 </label>
+//                 <div className="relative">
+//                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+//                     <i className="fas fa-building text-gray-400"></i>
+//                   </div>
+//                   <select
+//                     id="department"
+//                     name="department"
+//                     required={formData.role === 'user'}
+//                     value={formData.department}
+//                     onChange={handleChange}
+//                     className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none bg-white"
+//                   >
+//                     <option value="">Select Department</option>
+//                     {departments.map((dept) => (
+//                       <option key={dept} value={dept}>{dept}</option>
+//                     ))}
+//                   </select>
+//                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+//                     <i className="fas fa-chevron-down text-gray-400"></i>
+//                   </div>
+//                 </div>
+//               </div>
+//             )}
+
+//             {/* Info message for admin */}
+//             {formData.role === 'admin' && (
+//               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+//                 <p className="text-sm text-blue-700">
+//                   <i className="fas fa-info-circle mr-2"></i>
+//                   Administrator accounts have access to all departments.
+//                 </p>
+//               </div>
+//             )}
 
 //             {/* Password Field */}
 //             <div>
@@ -248,7 +327,6 @@
 //     </div>
 //   );
 // };
-
 // export default Register;
 
 
@@ -263,7 +341,9 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'admin'
+    role: 'user',
+    department: '',
+    semester: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -271,11 +351,49 @@ const Register = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  // Departments array
+  const departments = [
+    "Computer Science Engineering",
+    "Information Technology",
+    "Computer Technology",
+    "Industrial-IOT",
+    "Artificial Intelligence",
+    "Civil Engineering",
+    "Electrical Engineering",
+    "Mechanical Engineering",
+    "Robotics"
+  ];
+
+  // Semesters array
+  const semesters = [
+    "Semester 1",
+    "Semester 2", 
+    "Semester 3",
+    "Semester 4",
+    "Semester 5",
+    "Semester 6",
+    "Semester 7",
+    "Semester 8"
+  ];
+
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    
+    if (name === 'role') {
+      // If role changes to admin, clear department and semester
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        department: value === 'admin' ? '' : prev.department,
+        semester: value === 'admin' ? '' : prev.semester
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+    
     if (error) setError('');
   };
 
@@ -284,6 +402,7 @@ const Register = () => {
     setLoading(true);
     setError('');
 
+    // Validations
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       setLoading(false);
@@ -296,20 +415,44 @@ const Register = () => {
       return;
     }
 
+    // Department and semester validation only for user role
+    if (formData.role === 'user') {
+      if (!formData.department) {
+        setError('Please select a department for user account');
+        setLoading(false);
+        return;
+      }
+      
+      if (!formData.semester) {
+        setError('Please select a semester for user account');
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
-      const result = await register({
+      // Prepare data for API
+      const userData = {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        role: formData.role
-      });
+        role: formData.role,
+        // Only send department and semester if role is user
+        department: formData.role === 'user' ? formData.department : undefined,
+        semester: formData.role === 'user' ? formData.semester : undefined
+      };
+      
+      console.log("Registering user:", userData);
+      
+      const result = await register(userData);
       
       if (result.success) {
         navigate('/dashboard');
       } else {
-        setError(result.message);
+        setError(result.message || 'Registration failed');
       }
     } catch (error) {
+      console.error('Registration error:', error);
       setError('An error occurred during registration');
     } finally {
       setLoading(false);
@@ -321,9 +464,6 @@ const Register = () => {
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <div className="flex justify-center items-center mb-6">
-           
-          </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
             Create Account
           </h2>
@@ -402,14 +542,84 @@ const Register = () => {
                   onChange={handleChange}
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none bg-white"
                 >
+                  <option value="user">User (Student)</option>
                   <option value="admin">Administrator</option>
-                  <option value="user">User</option>
                 </select>
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                   <i className="fas fa-chevron-down text-gray-400"></i>
                 </div>
               </div>
             </div>
+
+            {/* Department Field - Only show for user role */}
+            {formData.role === 'user' && (
+              <>
+                <div>
+                  <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-2">
+                    Department *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <i className="fas fa-building text-gray-400"></i>
+                    </div>
+                    <select
+                      id="department"
+                      name="department"
+                      required={formData.role === 'user'}
+                      value={formData.department}
+                      onChange={handleChange}
+                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none bg-white"
+                    >
+                      <option value="">Select Department</option>
+                      {departments.map((dept) => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))}
+                    </select>
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <i className="fas fa-chevron-down text-gray-400"></i>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Semester Field - Only show for user role */}
+                <div>
+                  <label htmlFor="semester" className="block text-sm font-medium text-gray-700 mb-2">
+                    Current Semester *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <i className="fas fa-graduation-cap text-gray-400"></i>
+                    </div>
+                    <select
+                      id="semester"
+                      name="semester"
+                      required={formData.role === 'user'}
+                      value={formData.semester}
+                      onChange={handleChange}
+                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none bg-white"
+                    >
+                      <option value="">Select Semester</option>
+                      {semesters.map((sem) => (
+                        <option key={sem} value={sem}>{sem}</option>
+                      ))}
+                    </select>
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <i className="fas fa-chevron-down text-gray-400"></i>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Info message for admin */}
+            {formData.role === 'admin' && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  <i className="fas fa-info-circle mr-2"></i>
+                  Administrator accounts manage all departments and semesters.
+                </p>
+              </div>
+            )}
 
             {/* Password Field */}
             <div>

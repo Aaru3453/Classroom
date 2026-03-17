@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from 'react-router-dom';
@@ -5,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 const Profile = () => {
   const { user, updateProfile, logout } = useAuth();
   const navigate = useNavigate();
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
@@ -14,7 +15,9 @@ const Profile = () => {
 
   const [profileData, setProfileData] = useState({
     name: '',
-    email: ''
+    email: '',
+    department: '',
+    semester: ''
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -27,7 +30,9 @@ const Profile = () => {
     if (user) {
       setProfileData({
         name: user.name || '',
-        email: user.email || ''
+        email: user.email || '',
+        department: user.department || '',
+        semester: user.semester || ''
       });
     }
   }, [user]);
@@ -74,15 +79,17 @@ const Profile = () => {
     }
 
     try {
+      // Use the updateProfile function from AuthContext
       const result = await updateProfile(profileData);
-      
+
       if (result.success) {
-        setSuccess(result.message);
+        setSuccess(result.message || 'Profile updated successfully');
         setIsEditing(false);
       } else {
-        setError(result.message);
+        setError(result.message || 'Failed to update profile');
       }
     } catch (error) {
+      console.error('Profile update error:', error);
       setError('An error occurred while updating profile.');
     } finally {
       setLoading(false);
@@ -122,14 +129,14 @@ const Profile = () => {
     try {
       // Temporary implementation - simulate password change
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       setSuccess('Password changed successfully. Please login again.');
       setPasswordData({
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
       });
-      
+
       setTimeout(() => {
         logout();
         navigate('/login');
@@ -146,7 +153,9 @@ const Profile = () => {
     setIsEditing(false);
     setProfileData({
       name: user?.name || '',
-      email: user?.email || ''
+      email: user?.email || '',
+      department: user?.department || '',
+      semester: user?.semester || ''
     });
     clearMessages();
   };
@@ -180,7 +189,7 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 pt-16">
       <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        
+
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Profile Settings
@@ -191,7 +200,7 @@ const Profile = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          
+
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sticky top-24">
               <div className="text-center mb-6">
@@ -213,14 +222,10 @@ const Profile = () => {
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center">
-                    <i className="fas fa-calendar-alt text-blue-500 mr-3"></i>
-                    <span className="text-gray-700">Member since</span>
-                  </div>
-                  <span className="text-gray-900 font-medium">2024</span>
-                </div>
                 
+
+          
+                {/* Account Status */}
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center">
                     <i className="fas fa-shield-alt text-green-500 mr-3"></i>
@@ -228,16 +233,17 @@ const Profile = () => {
                   </div>
                   <span className="text-green-600 font-medium">Active</span>
                 </div>
+
+               
               </div>
 
               <div className="mt-6 space-y-2">
                 <button
                   onClick={() => setActiveTab('profile')}
-                  className={`w-full text-left px-4 py-3 rounded-lg text-sm font-semibold transition-colors flex items-center space-x-3 ${
-                    activeTab === 'profile' 
-                      ? 'bg-blue-100 text-blue-700' 
+                  className={`w-full text-left px-4 py-3 rounded-lg text-sm font-semibold transition-colors flex items-center space-x-3 ${activeTab === 'profile'
+                      ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                    }`}
                 >
                   <i className="fas fa-user-circle w-5 text-center"></i>
                   <span>Profile Information</span>
@@ -245,11 +251,10 @@ const Profile = () => {
 
                 <button
                   onClick={() => setActiveTab('password')}
-                  className={`w-full text-left px-4 py-3 rounded-lg text-sm font-semibold transition-colors flex items-center space-x-3 ${
-                    activeTab === 'password' 
-                      ? 'bg-blue-100 text-blue-700' 
+                  className={`w-full text-left px-4 py-3 rounded-lg text-sm font-semibold transition-colors flex items-center space-x-3 ${activeTab === 'password'
+                      ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                    }`}
                 >
                   <i className="fas fa-lock w-5 text-center"></i>
                   <span>Change Password</span>
@@ -263,7 +268,7 @@ const Profile = () => {
                     <i className="fas fa-key w-4"></i>
                     <span>Forgot Password?</span>
                   </button>
-                  
+
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:text-red-500 flex items-center space-x-2"
@@ -278,7 +283,7 @@ const Profile = () => {
 
           <div className="lg:col-span-3">
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-              
+
               {error && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
                   <i className="fas fa-exclamation-circle text-red-500 mr-3 mt-0.5"></i>
@@ -309,7 +314,7 @@ const Profile = () => {
                       <i className="fas fa-user-circle text-blue-500 mr-3 text-lg"></i>
                       Personal Information
                     </h3>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-3">
@@ -325,9 +330,8 @@ const Profile = () => {
                             type="text"
                             required
                             disabled={!isEditing}
-                            className={`block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                              !isEditing ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white text-gray-900'
-                            }`}
+                            className={`block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${!isEditing ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white text-gray-900'
+                              }`}
                             placeholder="Enter your full name"
                             value={profileData.name}
                             onChange={handleProfileChange}
@@ -352,9 +356,8 @@ const Profile = () => {
                             type="email"
                             required
                             disabled={!isEditing}
-                            className={`block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                              !isEditing ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white text-gray-900'
-                            }`}
+                            className={`block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${!isEditing ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white text-gray-900'
+                              }`}
                             placeholder="Enter your email address"
                             value={profileData.email}
                             onChange={handleProfileChange}
@@ -363,6 +366,100 @@ const Profile = () => {
                         {!isEditing && (
                           <p className="mt-1 text-xs text-gray-500">Enable edit mode to change</p>
                         )}
+                      </div>
+
+                      {/* Department Field - Show only for users */}
+                      {user.role === 'user' && (
+                        <div>
+                          <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-3">
+                            Department *
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <i className="fas fa-building text-gray-400"></i>
+                            </div>
+                            <input
+                              id="department"
+                              name="department"
+                              type="text"
+                              required
+                              disabled={true}
+                              className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                              value={profileData.department}
+                              readOnly
+                            />
+                          </div>
+                          <p className="mt-1 text-xs text-gray-500">Contact administrator to change department</p>
+                        </div>
+                      )}
+
+                      {/* Semester Field - Show only for users */}
+                      {user.role === 'user' && (
+                        <div>
+                          <label htmlFor="semester" className="block text-sm font-medium text-gray-700 mb-3">
+                            Semester *
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <i className="fas fa-graduation-cap text-gray-400"></i>
+                            </div>
+                            <input
+                              id="semester"
+                              name="semester"
+                              type="text"
+                              required
+                              disabled={true}
+                              className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                              value={profileData.semester}
+                              readOnly
+                            />
+                          </div>
+                          <p className="mt-1 text-xs text-gray-500">Contact administrator to change semester</p>
+                        </div>
+                      )}
+
+                      {/* Role Information - Read only */}
+                      <div>
+                        <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-3">
+                          Account Type
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i className="fas fa-user-tag text-gray-400"></i>
+                          </div>
+                          <input
+                            id="role"
+                            name="role"
+                            type="text"
+                            disabled={true}
+                            className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                            value={user.role === 'admin' ? 'Administrator' : 'User (Student)'}
+                            readOnly
+                          />
+                        </div>
+                      </div>
+
+                      {/* Account Created Date - Read only */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-3">
+                          Account Created
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i className="fas fa-calendar text-gray-400"></i>
+                          </div>
+                          <input
+                            type="text"
+                            disabled={true}
+                            className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                            value={user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            }) : 'N/A'}
+                            readOnly
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -396,7 +493,7 @@ const Profile = () => {
                             </>
                           )}
                         </button>
-                        
+
                         <button
                           type="button"
                           onClick={handleCancel}
@@ -422,7 +519,7 @@ const Profile = () => {
                     <p className="text-sm text-gray-600 mb-6">
                       After changing your password, you will be automatically logged out and need to login again.
                     </p>
-                    
+
                     <div className="space-y-6 max-w-2xl">
                       <div>
                         <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-3">

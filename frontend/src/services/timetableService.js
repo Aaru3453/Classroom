@@ -1,43 +1,87 @@
-import api from './api';
+import axios from 'axios';
 
-export const timetableService = {
-  // Timetable generation
-  generateTimetable: (data) => api.post('/timetables/generate', data),
-  getTimetables: () => api.get('/timetables'),
-  getTimetableById: (id) => api.get(`/timetables/${id}`),
-  updateTimetable: (id, data) => api.put(`/timetables/${id}`, data),
-  deleteTimetable: (id) => api.delete(`/timetables/${id}`),
+const API_URL = 'http://localhost:5000/api';
 
-  // Faculty constraints
-  getFacultyConstraints: () => api.get('/faculty/constraints'),
-  updateFacultyConstraints: (facultyId, constraints) => 
-    api.put(`/faculty/${facultyId}/constraints`, constraints),
+const timetableService = {
+  // Get all timetables
+  getAll: async (params = {}) => {
+    try {
+      const response = await axios.get(`${API_URL}/timetables`, { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Get timetable by ID
+  getById: async (id) => {
+    try {
+      const response = await axios.get(`${API_URL}/timetables/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Create timetable
+  create: async (timetableData) => {
+    try {
+      const response = await axios.post(`${API_URL}/timetables`, timetableData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Update timetable
+  update: async (id, timetableData) => {
+    try {
+      const response = await axios.put(`${API_URL}/timetables/${id}`, timetableData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Delete timetable
+  delete: async (id) => {
+    try {
+      const response = await axios.delete(`${API_URL}/timetables/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Generate timetable automatically
+  generate: async (data) => {
+    try {
+      const response = await axios.post(`${API_URL}/timetables/generate`, data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Check conflicts
+  checkConflicts: async (data) => {
+    try {
+      const response = await axios.post(`${API_URL}/timetables/check-conflicts`, data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Publish timetable
+  publish: async (id) => {
+    try {
+      const response = await axios.put(`${API_URL}/timetables/${id}/publish`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  }
 };
 
-export const facultyService = {
-  getAll: () => api.get('/faculty'),
-  create: (data) => api.post('/faculty', data),
-  update: (id, data) => api.put(`/faculty/${id}`, data),
-  delete: (id) => api.delete(`/faculty/${id}`),
-};
-
-export const subjectService = {
-  getAll: () => api.get('/subjects'),
-  create: (data) => api.post('/subjects', data),
-  update: (id, data) => api.put(`/subjects/${id}`, data),
-  delete: (id) => api.delete(`/subjects/${id}`),
-};
-
-export const classroomService = {
-  getAll: () => api.get('/classrooms'),
-  create: (data) => api.post('/classrooms', data),
-  update: (id, data) => api.put(`/classrooms/${id}`, data),
-  delete: (id) => api.delete(`/classrooms/${id}`),
-};
-
-export const batchService = {
-  getAll: () => api.get('/batches'),
-  create: (data) => api.post('/batches', data),
-  update: (id, data) => api.put(`/batches/${id}`, data),
-  delete: (id) => api.delete(`/batches/${id}`),
-};
+export default timetableService;
