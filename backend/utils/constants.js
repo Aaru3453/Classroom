@@ -1,9 +1,8 @@
 module.exports = {
-  // User roles
+  // User roles - REMOVE FACULTY
   ROLES: {
     ADMIN: 'admin',
-    FACULTY: 'faculty',
-    STUDENT: 'student'
+    USER: 'user'
   },
 
   // Classroom types
@@ -56,16 +55,17 @@ module.exports = {
     '16:00-17:00'
   ],
 
-  // Departments
+  // Departments - Add your departments here
   DEPARTMENTS: [
-    'Computer Science',
+    'Computer Science Engineering',
+    'Information Technology',
+    'Computer Technology',
+    'Industrial-IOT',
+    'Artificial Intelligence',
+    'Civil Engineering',
     'Electrical Engineering',
     'Mechanical Engineering',
-    'Civil Engineering',
-    'Mathematics',
-    'Physics',
-    'Chemistry',
-    'Biology'
+    'Robotics'
   ],
 
   // Notification types
@@ -76,16 +76,6 @@ module.exports = {
     ERROR: 'error',
     SCHEDULE: 'schedule',
     SYSTEM: 'system'
-  },
-
-  // Notification categories
-  NOTIFICATION_CATEGORIES: {
-    TIMETABLE: 'timetable',
-    FACULTY: 'faculty',
-    CLASSROOM: 'classroom',
-    BATCH: 'batch',
-    SYSTEM: 'system',
-    ALERT: 'alert'
   },
 
   // File upload limits
@@ -101,5 +91,15 @@ module.exports = {
     '2024-2025',
     '2025-2026',
     '2026-2027'
+  ],
+  SEMESTERS: [
+    'Semester 1',
+    'Semester 2',
+    'Semester 3',
+    'Semester 4',
+    'Semester 5',
+    'Semester 6',
+    'Semester 7',
+    'Semester 8'
   ]
 };

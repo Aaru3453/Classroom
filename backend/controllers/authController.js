@@ -1,5 +1,4 @@
 import User from "../models/User.js";
-import Faculty from "../models/Faculty.js";
 import validator from "validator";
 
 const sendTokenResponse = (user, statusCode, res) => {
@@ -14,6 +13,10 @@ const sendTokenResponse = (user, statusCode, res) => {
       email: user.email,
       role: user.role,
       department: user.department,
+      semester: user.semester,
+      isActive: user.isActive,
+      lastLogin: user.lastLogin,
+      createdAt: user.createdAt
     },
   });
 };
@@ -21,14 +24,44 @@ const sendTokenResponse = (user, statusCode, res) => {
 // ================= REGISTER =================
 export const register = async (req, res) => {
   try {
-    const { name, email, password, role, department } = req.body;
+    const { name, email, password, role, department, semester } = req.body;
 
-    if (!name || !email || !password || !role || !department) {
+    // Validation
+    if (!name || !email || !password || !role) {
       return res.status(400).json({
         success: false,
         message: "All fields required",
       });
     }
+
+    // Validate role
+    if (!['admin', 'user'].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid role. Must be 'admin' or 'user'",
+      });
+    }
+
+    // Department and semester validation - ONLY for user role
+    if (role === 'user') {
+      if (!department) {
+        return res.status(400).json({
+          success: false,
+          message: "Department is required for user role",
+        });
+      }
+      
+      if (!semester) {
+        return res.status(400).json({
+          success: false,
+          message: "Semester is required for user role",
+        });
+      }
+    }
+
+    // For admin, set default values
+    const userDepartment = role === 'user' ? department : 'Administration';
+    const userSemester = role === 'user' ? semester : 'N/A';
 
     if (!validator.isEmail(email)) {
       return res.status(400).json({
@@ -37,7 +70,11 @@ export const register = async (req, res) => {
       });
     }
 
-    const existingUser = await User.findOne({ email });
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -45,29 +82,22 @@ export const register = async (req, res) => {
       });
     }
 
+    // Create user
     const user = await User.create({
       name,
-      email,
+      email: normalizedEmail,
       password,
       role,
-      department,
+      department: userDepartment,
+      semester: userSemester,
     });
-
-    if (role === "faculty") {
-      await Faculty.create({
-        user: user._id,
-        employeeId: `FAC${Date.now()}`,
-        department,
-        designation: "Professor",
-      });
-    }
 
     sendTokenResponse(user, 201, res);
   } catch (err) {
     console.error("REGISTER ERROR:", err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: err.message || "Registration failed",
     });
   }
 };
@@ -84,8 +114,12 @@ export const login = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email }).select("+password");
-
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
+    
+    // Find user
+    const user = await User.findOne({ email: normalizedEmail, isActive: true }).select("+password");
+    
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -94,6 +128,7 @@ export const login = async (req, res) => {
     }
 
     const isMatch = await user.matchPassword(password);
+    
     if (!isMatch) {
       return res.status(401).json({
         success: false,
@@ -101,12 +136,16 @@ export const login = async (req, res) => {
       });
     }
 
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save({ validateBeforeSave: false });
+
     sendTokenResponse(user, 200, res);
   } catch (err) {
     console.error("❌ LOGIN ERROR:", err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: err.message || "Server error",
     });
   }
 };

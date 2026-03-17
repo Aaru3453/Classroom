@@ -1,71 +1,56 @@
+// models/Classroom.js
 import mongoose from "mongoose";
 
 const classroomSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "Classroom name is required"],
-      unique: true,
-      trim: true,
+      required: true,
     },
     building: {
       type: String,
-      required: [true, "Building is required"],
-      enum: [
-        "IT Building",
-        "Main Academic Building",
-        "Science Building",
-        "Engineering Building",
-        "Humanities Block",
-        "Library Building",
-      ],
+      required: true,
+    },
+    department: {
+        type: String,
+        required: [true, 'Department is required'],
+        enum: ['Computer Science Engineering', 'Information Technology', 'Computer Technology', 
+            'Industrial-IOT', 'Artificial Intelligence', 'Civil Engineering', 'Electrical Engineering', 
+            'Mechanical Engineering', 'Robotics']
     },
     capacity: {
       type: Number,
-      required: [true, "Capacity is required"],
-      min: 1,
-      max: 500,
+      required: true,
     },
     type: {
       type: String,
-      required: [true, "Classroom type is required"],
-      enum: [
-        "Lecture Hall",
-        "Lab",
-        "Seminar Room",
-        "Auditorium",
-        "Tutorial Room",
-      ],
+      required: true,
+      enum: ["Core", "Elective", "Lab", "Project", "Workshop", "Seminar"],
     },
-    equipment: [
-      {
-        type: String,
-        enum: [
-          "Projector",
-          "Smart Board",
-          "Computers",
-          "Sound System",
-          "Lab Equipment",
-          "Whiteboard",
-          "Video Conference",
-          "Air Conditioning",
-          "Network",
-          "WiFi",
-        ],
-      },
-    ],
+    equipment: {
+      type: [String],
+      default: [],
+    },
     availability: {
       type: String,
-      enum: ["Available", "In Use", "Under Maintenance"],
-      default: "Available",
+      required: true,
+      enum: ['Available', 'In Use', 'Under Maintenance'],
+      default: 'Available',
     },
-    status: {
-      type: Boolean,
-      default: true,
-    },
+    // AUTO-GENERATED CODE FIELD
+    code: {
+      type: String,
+      unique: true,
+      required: true,
+      default: function() {
+        // Auto-generate code: Building initial + Random number
+        const buildingCode = this.building ? this.building.substring(0, 3).toUpperCase() : 'GEN';
+        const randomNum = Math.floor(Math.random() * 1000);
+        return `${buildingCode}-${Date.now().toString().slice(-4)}-${randomNum}`;
+      }
+    }
   },
   { timestamps: true }
 );
 
-const Classroom = mongoose.model("Classroom", classroomSchema);
-export default Classroom;
+export default mongoose.model("Classroom", classroomSchema);

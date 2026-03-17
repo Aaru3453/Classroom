@@ -5,7 +5,6 @@ const facultySchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
-      trim: true,
     },
 
     email: {
@@ -45,6 +44,12 @@ const facultySchema = new mongoose.Schema(
     status: {
       type: Boolean,
       default: true,
+    },
+
+    facultyId: {
+      type: String,
+      required: true,
+      unique: true,
     },
   },
   { timestamps: true }

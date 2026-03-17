@@ -1,57 +1,84 @@
-const mongoose = require('mongoose');
+// import mongoose from 'mongoose';
 
-const semesterSubjectSchema = new mongoose.Schema({
-  subject: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Subject'
-  },
-  faculty: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Faculty'
-  }
-});
+// const batchSchema = new mongoose.Schema({
+//   name: {
+//     type: String,
+//     required: true,
+//     trim: true
+//   },
+//   code: {
+//     type: String,
+//     required: true,
+//     unique: true,
+//     trim: true
+//   },
+//   department: {
+//     type: String,
+//     required: true
+//   },
+//   academicYear: {
+//     type: Number,
+//     required: true
+//   },
+//   currentSemester: {
+//     type: Number,
+//     required: true,
+//     min: 1,
+//     max: 8
+//   },
+//   startYear: {
+//     type: Number,
+//     required: true
+//   },
+//   endYear: {
+//     type: Number,
+//     required: true
+//   },
+//   totalStudents: {
+//     type: Number,
+//     default: 0
+//   },
+//   status: {
+//     type: String,
+//     enum: ['Active', 'Graduated', 'Inactive'],
+//     default: 'Active'
+//   }
+// }, {
+//   timestamps: true
+// });
 
-const semesterSchema = new mongoose.Schema({
-  semesterNumber: {
-    type: Number,
-    required: true,
-    min: 1,
-    max: 8
-  },
-  name: {
-    type: String,
-    required: true
-  },
-  subjects: [semesterSubjectSchema],
-  startDate: Date,
-  endDate: Date
-});
+// const Batch = mongoose.model('Batch', batchSchema);
+// export default Batch;  // Make sure this is here
+
+
+import mongoose from 'mongoose';
 
 const batchSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, 'Please add a batch name'],
+    required: true,
     trim: true
   },
   code: {
     type: String,
-    required: [true, 'Please add a batch code'],
+    required: true,
     unique: true,
     trim: true
   },
   department: {
     type: String,
-    required: [true, 'Please add a department']
+    required: true
   },
   academicYear: {
-    type: String,
-    required: [true, 'Please add academic year']
+    type: Number,
+    required: true
   },
-  classTeacher: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Faculty'
+  currentSemester: {
+    type: Number,
+    required: true,
+    min: 1,
+    max: 8
   },
-  semesters: [semesterSchema],
   startYear: {
     type: Number,
     required: true
@@ -64,12 +91,30 @@ const batchSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  isActive: {
-    type: Boolean,
-    default: true
+
+  // ✅ ADD THIS (IMPORTANT 🔥)
+  semesters: [
+    {
+      semesterNumber: Number,
+      subjects: [
+        {
+          subject: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Subject'
+          }
+        }
+      ]
+    }
+  ],
+
+  status: {
+    type: String,
+    enum: ['Active', 'Graduated', 'Inactive'],
+    default: 'Active'
   }
 }, {
   timestamps: true
 });
 
-module.exports = mongoose.model('Batch', batchSchema);
+const Batch = mongoose.model('Batch', batchSchema);
+export default Batch;

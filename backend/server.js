@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 
+import batchRoutes from './routes/batches.js';
 import classroomRoutes from "./routes/classrooms.js";
 import authRoutes from "./routes/auth.js";
 import subjectRoutes from "./routes/subjects.js";
@@ -33,6 +34,7 @@ mongoose
     console.error("MongoDB connection error:", err.message);
   });
 
+app.use('/api/batches', batchRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/subjects", subjectRoutes);
 app.use("/api/classrooms", classroomRoutes);

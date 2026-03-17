@@ -17,7 +17,13 @@ export const getSubjects = async (req, res) => {
 
 export const createSubject = async (req, res) => {
   try {
-    const subject = await Subject.create(req.body);
+    // ✅ Status को हमेशा true set करें
+    const subjectData = {
+      ...req.body,
+      status: true // हमेशा true
+    };
+    
+    const subject = await Subject.create(subjectData);
     res.status(201).json({
       success: true,
       data: subject,
@@ -32,9 +38,12 @@ export const createSubject = async (req, res) => {
 
 export const updateSubject = async (req, res) => {
   try {
+    // ✅ Update data से status निकालें (हमेशा true रहेगा)
+    const { status, ...updateData } = req.body;
+    
     const subject = await Subject.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateData, // status update नहीं करेंगे
       { new: true, runValidators: true }
     );
 

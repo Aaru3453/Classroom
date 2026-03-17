@@ -1,16 +1,30 @@
-import express from "express";
+import express from 'express';
+const router = express.Router();
 import {
-  getTimetables,
+  generateTimetable,
   createTimetable,
+  getAllTimetables,
+  getTimetableById,
   updateTimetable,
   deleteTimetable,
-} from "../controllers/timetableController.js";
+  checkConflicts,
+  publishTimetable,
+  addBreak,
+  removeBreak
+} from '../controllers/timetableController.js';
 
-const router = express.Router();
+// All timetables routes
+router.get('/', getAllTimetables);
+router.get('/:id', getTimetableById);
+router.post('/check-conflicts', checkConflicts);
+router.post('/generate', generateTimetable);
+router.post('/', createTimetable);
+router.put('/:id', updateTimetable);
+router.delete('/:id', deleteTimetable);
+router.put('/:id/publish', publishTimetable);
 
-router.get("/", getTimetables);
-router.post("/", createTimetable);
-router.put("/:id", updateTimetable);
-router.delete("/:id", deleteTimetable);
+// Break management routes
+router.post('/:id/breaks', addBreak);
+router.delete('/:id/breaks/:breakId', removeBreak);
 
 export default router;

@@ -19,7 +19,10 @@ export const protect = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "eduscheduler-secret-key"
+    );
 
     req.user = await User.findById(decoded.id).select("-password");
 

@@ -1,94 +1,96 @@
-const Batch = require('../models/Batch');
 
-// @desc    Get all batches
-// @route   GET /api/batches
-// @access  Private
-exports.getBatches = async (req, res, next) => {
+
+import StudentBatch from "../models/StudentBatch.js";
+
+// Get all batches - यहाँ कोई change नहीं
+export const getAllBatches = async (req, res) => {
   try {
-    const { department, search } = req.query;
-    
-    let query = { isActive: true };
-    
-    if (department && department !== 'All Departments') {
-      query.department = department;
-    }
-    
-    if (search) {
-      query.$or = [
-        { code: { $regex: search, $options: 'i' } },
-        { name: { $regex: search, $options: 'i' } }
-      ];
-    }
-
-    const batches = await Batch.find(query)
-      .populate('classTeacher', 'user designation')
-      .populate('classTeacher.user', 'name email')
-      .sort({ academicYear: -1, code: 1 });
+    const batches = await StudentBatch.find()
+      .populate({
+        path: 'semesters.subjects.subject',
+        model: 'Subject'
+      });
+      console.log("Batches with subjects:", JSON.stringify(batches, null, 2));
 
     res.status(200).json({
       success: true,
-      count: batches.length,
       data: batches
     });
   } catch (error) {
-    next(error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
-// @desc    Get single batch
-// @route   GET /api/batches/:id
-// @access  Private
-exports.getBatch = async (req, res, next) => {
+// Get batch by ID - यहाँ कोई change नहीं
+export const getBatchById = async (req, res) => {
   try {
-    const batch = await Batch.findById(req.params.id)
-      .populate('classTeacher', 'user designation')
-      .populate('classTeacher.user', 'name email')
-      .populate('semesters.subjects.subject', 'name code credits type')
-      .populate('semesters.subjects.faculty', 'user designation')
-      .populate('semesters.subjects.faculty.user', 'name email');
-
+    const batch = await StudentBatch.findById(req.params.id)
+      .populate({
+        path: 'semesters.subjects.subject',
+        model: 'Subject'
+      });
     if (!batch) {
       return res.status(404).json({
         success: false,
         message: 'Batch not found'
       });
     }
-
     res.status(200).json({
       success: true,
       data: batch
     });
   } catch (error) {
-    next(error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
-// @desc    Create batch
-// @route   POST /api/batches
-// @access  Private
-exports.createBatch = async (req, res, next) => {
+// Create new batch - ✅ currentSemester को handle करें
+export const createBatch = async (req, res) => {
   try {
-    const batch = await Batch.create(req.body);
+    const { currentSemester = 1, ...batchData } = req.body;
 
-    const populatedBatch = await Batch.findById(batch._id)
-      .populate('classTeacher', 'user designation')
-      .populate('classTeacher.user', 'name email');
+    // Generate default semesters
+    const semesters = Array.from({ length: 8 }, (_, i) => ({
+      semesterNumber: i + 1,
+      subjects: [],
+      isActive: i === 0 // Only first semester active by default
+    }));
+
+    const newBatchData = {
+      ...batchData,
+      currentSemester,
+      semesters
+    };
+
+    const batch = new StudentBatch(newBatchData);
+    await batch.save();
 
     res.status(201).json({
       success: true,
-      data: populatedBatch
+      data: batch
     });
   } catch (error) {
-    next(error);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
-// @desc    Update batch
-// @route   PUT /api/batches/:id
-// @access  Private
-exports.updateBatch = async (req, res, next) => {
+// Update batch - ✅ currentSemester को handle करें
+export const updateBatch = async (req, res) => {
   try {
-    let batch = await Batch.findById(req.params.id);
+    const batch = await StudentBatch.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    ).populate('semesters.subjects.subject');
 
     if (!batch) {
       return res.status(404).json({
@@ -96,57 +98,74 @@ exports.updateBatch = async (req, res, next) => {
         message: 'Batch not found'
       });
     }
-
-    batch = await Batch.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true
-    }).populate('classTeacher', 'user designation')
-      .populate('classTeacher.user', 'name email');
 
     res.status(200).json({
       success: true,
       data: batch
     });
   } catch (error) {
-    next(error);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
-// @desc    Delete batch
-// @route   DELETE /api/batches/:id
-// @access  Private
-exports.deleteBatch = async (req, res, next) => {
+// Delete batch - यहाँ कोई change नहीं
+export const deleteBatch = async (req, res) => {
   try {
-    const batch = await Batch.findById(req.params.id);
-
+    const batch = await StudentBatch.findByIdAndDelete(req.params.id);
     if (!batch) {
       return res.status(404).json({
         success: false,
         message: 'Batch not found'
       });
     }
-
-    batch.isActive = false;
-    await batch.save();
 
     res.status(200).json({
       success: true,
       message: 'Batch deleted successfully'
     });
   } catch (error) {
-    next(error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
-// @desc    Add subject to batch semester
-// @route   PUT /api/batches/:id/semesters/:semesterId/subjects
-// @access  Private
-exports.addSubjectToSemester = async (req, res, next) => {
+// Get batch statistics - यहाँ कोई change नहीं
+export const getBatchStats = async (req, res) => {
   try {
-    const { subjectId, facultyId } = req.body;
-    
-    const batch = await Batch.findById(req.params.id);
-    
+    const totalBatches = await StudentBatch.countDocuments();
+    const activeBatches = await StudentBatch.countDocuments({ status: 'Active' });
+    const batchesByDepartment = await StudentBatch.aggregate([
+      { $group: { _id: '$department', count: { $sum: 1 } } }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalBatches,
+        activeBatches,
+        batchesByDepartment
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Add subjects to semester - यहाँ कोई change नहीं
+export const addSubjectsToSemester = async (req, res) => {
+  try {
+    const { id, semesterNumber } = req.params;
+    const { subjects } = req.body;
+
+    const batch = await StudentBatch.findById(id);
     if (!batch) {
       return res.status(404).json({
         success: false,
@@ -154,8 +173,82 @@ exports.addSubjectToSemester = async (req, res, next) => {
       });
     }
 
-    const semester = batch.semesters.id(req.params.semesterId);
-    
+    const semesterIndex = batch.semesters.findIndex(s => s.semesterNumber == semesterNumber);
+    if (semesterIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Semester not found'
+      });
+    }
+
+    batch.semesters[semesterIndex].subjects.push(...subjects);
+    await batch.save();
+
+    res.status(200).json({
+      success: true,
+      data: batch
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Remove subject from semester - यहाँ कोई change नहीं
+export const removeSubjectFromSemester = async (req, res) => {
+  try {
+    const { id, semesterNumber, subjectId } = req.params;
+
+    const batch = await StudentBatch.findById(id);
+    if (!batch) {
+      return res.status(404).json({
+        success: false,
+        message: 'Batch not found'
+      });
+    }
+
+    const semesterIndex = batch.semesters.findIndex(s => s.semesterNumber == semesterNumber);
+    if (semesterIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Semester not found'
+      });
+    }
+
+    batch.semesters[semesterIndex].subjects = batch.semesters[semesterIndex].subjects.filter(
+      sub => sub._id.toString() !== subjectId
+    );
+
+    await batch.save();
+
+    res.status(200).json({
+      success: true,
+      data: batch
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// backend/controllers/batchController.js में add करें:
+export const getSemesterSubjects = async (req, res) => {
+  try {
+    const { id, semesterNumber } = req.params;
+
+    const batch = await StudentBatch.findById(id);
+    if (!batch) {
+      return res.status(404).json({
+        success: false,
+        message: 'Batch not found'
+      });
+    }
+
+    const semester = batch.semesters.find(s => s.semesterNumber == semesterNumber);
     if (!semester) {
       return res.status(404).json({
         success: false,
@@ -163,85 +256,21 @@ exports.addSubjectToSemester = async (req, res, next) => {
       });
     }
 
-    semester.subjects.push({
-      subject: subjectId,
-      faculty: facultyId
+    // Populate subject details
+    const populatedSemester = await StudentBatch.populate(semester, {
+      path: 'subjects.subject',
+      model: 'Subject'
     });
-
-    await batch.save();
-
-    const updatedBatch = await Batch.findById(batch._id)
-      .populate('semesters.subjects.subject', 'name code credits type')
-      .populate('semesters.subjects.faculty', 'user designation')
-      .populate('semesters.subjects.faculty.user', 'name email');
 
     res.status(200).json({
       success: true,
-      data: updatedBatch
+      data: populatedSemester.subjects
     });
   } catch (error) {
-    next(error);
-  }
-};
-
-exports.forgotPassword = async (req, res, next) => {
-  try {
-    const { email } = req.body;
-
-    // Validate email
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide an email address'
-      });
-    }
-
-    if (!validator.isEmail(email)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide a valid email'
-      });
-    }
-
-    // Check if user exists
-    const user = await User.findOne({ email });
-    
-    if (!user) {
-      // For security reasons, don't reveal if email exists or not
-      return res.status(200).json({
-        success: true,
-        message: 'If the email exists, a password reset link has been sent'
-      });
-    }
-
-    // Generate reset token (you can use JWT or crypto)
-    const resetToken = jwt.sign(
-      { id: user._id }, 
-      process.env.JWT_SECRET + user.password, 
-      { expiresIn: '15m' }
-    );
-
-    // In a real application, you would:
-    // 1. Save resetToken to user document
-    // 2. Send email with reset link
-    // 3. Handle token expiration
-
-    console.log(`Password reset token for ${email}: ${resetToken}`);
-    console.log(`Reset URL: http://localhost:3000/reset-password/${resetToken}`);
-
-    // For now, return success response
-    res.status(200).json({
-      success: true,
-      message: 'Password reset link has been sent to your email',
-      // In production, don't send token in response
-      resetToken: resetToken // Remove this in production
-    });
-
-  } catch (error) {
-    console.error('Forgot password error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to process password reset request'
+      message: error.message
     });
   }
 };
+
