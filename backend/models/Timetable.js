@@ -19,7 +19,7 @@ const parallelClassSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['Core', 'Elective', 'Lab', 'Project', 'Workshop', 'Seminar'],
+    enum: ['Core', 'Elective', 'Lab', 'MDM','PEC','Project', 'Workshop', 'Seminar'],
     default: 'Theory'
   },
   batchDivision: {
@@ -57,7 +57,7 @@ const scheduleEntrySchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['Core', 'Elective', 'Lab', 'Project', 'Workshop', 'Seminar'],
+    enum: ['Core', 'Elective', 'Lab', 'MDM','PEC', 'Project', 'Workshop', 'Seminar'],
     default: 'Theory'
   },
   batchDivision: {
@@ -124,11 +124,6 @@ const timetableSchema = new mongoose.Schema({
   totalStudents: {
     type: Number,
     default: 0
-  },
-  status: {
-    type: String,
-    enum: ['Draft', 'Published', 'Archived'],
-    default: 'Draft'
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,

@@ -27,7 +27,6 @@ module.exports = {
 
   // Timetable status
   TIMETABLE_STATUS: {
-    DRAFT: 'Draft',
     PENDING_REVIEW: 'Pending Review',
     APPROVED: 'Approved',
     REJECTED: 'Rejected'

@@ -29,7 +29,7 @@ const subjectSchema = new mongoose.Schema({
     type: {
         type: String,
         required: [true, 'Subject type is required'],
-        enum: ['Core', 'Elective', 'Lab', 'Project', 'Workshop', 'Seminar']
+        enum: ['Core', 'Elective', 'Lab', 'MDM', 'PEC','Project', 'Workshop', 'Seminar']
     },
     semester: {
         type: String,

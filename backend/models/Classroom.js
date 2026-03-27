@@ -25,7 +25,7 @@ const classroomSchema = new mongoose.Schema(
     type: {
       type: String,
       required: true,
-      enum: ["Core", "Elective", "Lab", "Project", "Workshop", "Seminar"],
+      enum: ["Core", "Elective", "Lab", 'MDM', 'PEC', "Project", "Workshop", "Seminar"],
     },
     equipment: {
       type: [String],

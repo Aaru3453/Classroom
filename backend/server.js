@@ -9,7 +9,10 @@ import authRoutes from "./routes/auth.js";
 import subjectRoutes from "./routes/subjects.js";
 import timetableRoutes from "./routes/timetables.js";
 import facultyRoutes from "./routes/faculty.js";
-
+import dashboardRoutes from "./routes/dashboard.js";
+import settingRoutes from "./routes/settings.js";
+import suggestionsRoutes from "./routes/suggestions.js";
+import supportRoutes from "./routes/supportRoutes.js";
 
 dotenv.config();
 
@@ -40,7 +43,10 @@ app.use("/api/subjects", subjectRoutes);
 app.use("/api/classrooms", classroomRoutes);
 app.use("/api/faculty", facultyRoutes);
 app.use("/api/timetables", timetableRoutes);
-
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/settings", settingRoutes);
+app.use("/api/suggestions", suggestionsRoutes);
+app.use("/api/support", supportRoutes);
 
 
 app.get("/api/test", (req, res) => {
@@ -51,3 +57,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+

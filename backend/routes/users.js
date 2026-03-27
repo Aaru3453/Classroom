@@ -8,24 +8,25 @@ const router = express.Router();
 
 router.use(protect);
 
-// =============== PROFILE ROUTES (All users) ===============
-router.get("/profile", userController.getProfile); // Get current user profile
-router.put("/profile", userController.updateProfile); // Update current user profile
-router.put("/change-password", userController.changePassword); // Change password
-router.put("/preferences", userController.updatePreferences); // Update preferences
+// ================= USER (admin + user dono) =================
+router.get("/profile", authorize("user"), userController.getProfile);
+router.put("/profile", authorize("user"), userController.updateProfile);
+router.put("/change-password", authorize("user"), userController.changePassword);
+router.put("/preferences", authorize("user"), userController.updatePreferences);
 
-// =============== ADMIN ROUTES (Admin only) ===============
-router.get("/", authorize("admin"), userController.getUsers); // Get all users
-router.get("/:id", authorize("admin"), userController.getUser); // Get user by ID
-router.post("/", authorize("admin"), userController.createUser); // Create new user
-router.put("/:id", authorize("admin"), userController.updateUser); // Update user
-router.delete("/:id", authorize("admin"), userController.deleteUser); // Delete user (soft delete)
 
-// =============== ADMIN MANAGEMENT ROUTES ===============
-router.get("/stats", authorize("admin"), userController.getUserStats); // Get user statistics
-router.put("/:id/reset-password", authorize("admin"), userController.resetPassword); // Reset user password
-router.post("/bulk", authorize("admin"), userController.bulkCreateUsers); // Bulk create users
-router.put("/bulk-deactivate", authorize("admin"), userController.bulkDeactivateUsers); // Bulk deactivate users
-router.get("/search", authorize("admin"), userController.searchUsers); // Search users
+// ================= ADMIN ONLY =================
+router.get("/", authorize("admin"), userController.getUsers);
+router.get("/:id", authorize("admin"), userController.getUser);
+router.post("/", authorize("admin"), userController.createUser);
+router.put("/:id", authorize("admin"), userController.updateUser);
+router.delete("/:id", authorize("admin"), userController.deleteUser);
+
+// ================= EXTRA ADMIN =================
+router.get("/stats", authorize("admin"), userController.getUserStats);
+router.put("/:id/reset-password", authorize("admin"), userController.resetPassword);
+router.post("/bulk", authorize("admin"), userController.bulkCreateUsers);
+router.put("/bulk-deactivate", authorize("admin"), userController.bulkDeactivateUsers);
+router.get("/search", authorize("admin"), userController.searchUsers);
 
 export default router;

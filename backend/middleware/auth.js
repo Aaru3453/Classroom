@@ -41,3 +41,22 @@ export const protect = async (req, res, next) => {
     });
   }
 };
+
+export const authorize = (...roles) => {
+  return (req, res, next) => {
+    // Admin ko full access
+    if (req.user.role === "admin") {
+      return next();
+    }
+
+    // User ke liye check
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied",
+      });
+    }
+
+    next();
+  };
+};

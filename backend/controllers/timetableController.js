@@ -221,7 +221,6 @@ export const createTimetable = async (req, res) => {
       schedule,
       breaks,
       totalStudents,
-      status = 'Draft'
     } = req.body;
 
     // Validate required fields
@@ -265,7 +264,6 @@ export const createTimetable = async (req, res) => {
       schedule: schedule || [],
       breaks: breaks || [],
       totalStudents: batchTotalStudents,
-      status,
       createdBy: req.user?._id
     });
     await timetable.save();
@@ -307,7 +305,6 @@ export const createTimetable = async (req, res) => {
 export const getAllTimetables = async (req, res) => {
   try {
     const {
-      status,
       batch,
       semester,
       academicYear,
@@ -317,7 +314,6 @@ export const getAllTimetables = async (req, res) => {
 
     // Build query
     const query = {};
-    if (status) query.status = status;
     if (batch) query.batch = batch;
     if (semester) query.semester = semester;
     if (academicYear) query.academicYear = academicYear;
