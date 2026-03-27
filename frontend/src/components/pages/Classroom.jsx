@@ -60,7 +60,7 @@ const Classroom = () => {
   ];
 
   const typeOptions = [
-    "Core", "Elective", "Lab", "Project", "Workshop", "Seminar"
+    "Core", "Elective", "Lab", 'MDM', 'PEC',"Project", "Workshop", "Seminar"
   ];
   const availabilityOptions = ["Available", "In Use", "Under Maintenance"];
 

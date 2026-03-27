@@ -32,7 +32,7 @@ const Login = () => {
       console.log("Login result:", result);
       
       if (result && result.success) {
-        navigate('/dashboard');
+        navigate('/');
       } else {
         setError(result?.message || 'Login failed. Please check your credentials.');
       }

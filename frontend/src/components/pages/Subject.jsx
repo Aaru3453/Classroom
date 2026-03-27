@@ -33,7 +33,7 @@ const Subject = () => {
     'Mechanical Engineering', 'Robotics'
   ];
   
-  const types = ["Core", "Elective", "Lab", "Project", "Workshop", "Seminar"];
+  const types = ["Core", "Elective", "Lab", "MDM", "PEC","Project", "Workshop", "Seminar"];
   const semesters = ["Semester 1", "Semester 2", "Semester 3", "Semester 4", 
                      "Semester 5", "Semester 6", "Semester 7", "Semester 8"];
 

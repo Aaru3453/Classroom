@@ -1,3 +1,5 @@
+
+// classroom/frontend/src/services/api.js
 import axios from "axios";
 
 const api = axios.create({
@@ -84,6 +86,30 @@ export const batchAPI = {
   delete: (id) => api.delete(`/batches/${id}`),
 };
 
+// Dashboard API Service
+export const dashboardAPI = {
+  getDashboard: () => api.get("/dashboard"),
+  getStats: () => api.get("/dashboard/stats"),
+  refreshDashboard: () => api.post("/dashboard/refresh"),
+};
 
+// services/api.js
+export const settingsAPI = {
+  getSettings: () => api.get('/settings'),
+  updateSettings: (data) => api.put('/settings', data),
+  patchSettings: (data) => api.patch('/settings', data),
+  resetSettings: () => api.post('/settings/reset')
+};
+
+// Export all APIs as a single object
+export const apiServices = {
+  auth: authAPI,
+  subject: subjectAPI,
+  faculty: facultyAPI,
+  classroom: classroomAPI,
+  batch: batchAPI,
+  dashboard: dashboardAPI,
+  settings: settingsAPI
+};
 
 export default api;

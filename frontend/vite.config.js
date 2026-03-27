@@ -4,11 +4,10 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   plugins: [
-    tailwindcss(),
     react({
       jsxRuntime: 'automatic',
-      // Remove babel config for now
-    })
+    }),
+    tailwindcss(), // tailwindcss plugin should be after react
   ],
   server: {
     port: 5173,
