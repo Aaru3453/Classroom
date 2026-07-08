@@ -2,6 +2,11 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
+
+dotenv.config({
+  path: path.join(process.cwd(), ".env"),
+});
 
 import batchRoutes from './routes/batches.js';
 import classroomRoutes from "./routes/classrooms.js";
@@ -13,18 +18,33 @@ import dashboardRoutes from "./routes/dashboard.js";
 import settingRoutes from "./routes/settings.js";
 import suggestionsRoutes from "./routes/suggestions.js";
 import supportRoutes from "./routes/supportRoutes.js";
+import notificationRoutes from './routes/notifications.js';
+import noteRoutes from './routes/noteRoutes.js';
+import leaveRoutes from './routes/leaves.js';
 
-dotenv.config();
-
+dotenv.config({
+  path: path.join(process.cwd(), ".env"),
+});
 const app = express();
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://eduschedular-frontend.onrender.com",
+  process.env.CLIENT_URL,
+].filter(Boolean);
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -47,7 +67,9 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/settings", settingRoutes);
 app.use("/api/suggestions", suggestionsRoutes);
 app.use("/api/support", supportRoutes);
-
+app.use("/api/notifications", notificationRoutes);
+app.use('/api/notes', noteRoutes);
+app.use('/api/leaves', leaveRoutes);
 
 app.get("/api/test", (req, res) => {
   res.json({ success: true });
@@ -57,5 +79,3 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
-

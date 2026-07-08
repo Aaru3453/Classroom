@@ -64,9 +64,9 @@ body:not(.dark) {
 }
 
 /* Ensure all containers inherit */
-div, section, main, article {
+/* div, section, main, article {
   background-color: inherit;
-}
+} */
 
 /* Card styles */
 .bg-white {
@@ -179,3 +179,105 @@ button {
   gap: 0.75rem !important;
 }
 
+/* Home component exceptions - override karo */
+.home-page .bg-white {
+  background-color: #ffffff !important;
+}
+
+.dark .home-page .bg-white {
+  background-color: #1f2937 !important;
+}
+
+.home-page .text-gray-900 {
+  color: #111827 !important;
+}
+
+.dark .home-page .text-gray-900 {
+  color: #f3f4f6 !important;
+}
+
+/* Home component exceptions - Override for Home page only */
+.home-page .bg-white {
+  background-color: #ffffff !important;
+}
+
+.dark .home-page .bg-white {
+  background-color: #1f2937 !important;
+}
+
+.home-page .text-gray-900 {
+  color: #111827 !important;
+}
+
+.dark .home-page .text-gray-900 {
+  color: #f3f4f6 !important;
+}
+
+/* Additional Home page overrides */
+.home-page .text-gray-600 {
+  color: #4b5563 !important;
+}
+
+.dark .home-page .text-gray-600 {
+  color: #9ca3af !important;
+}
+
+.home-page .border-gray-200 {
+  border-color: #e5e7eb !important;
+}
+
+.dark .home-page .border-gray-200 {
+  border-color: #374151 !important;
+}
+
+.home-page .bg-blue-100 {
+  background-color: #dbeafe !important;
+}
+
+.dark .home-page .bg-blue-100 {
+  background-color: rgba(30, 58, 138, 0.3) !important;
+}
+
+.home-page .text-blue-600 {
+  color: #2563eb !important;
+}
+
+.dark .home-page .text-blue-600 {
+  color: #60a5fa !important;
+}
+
+/* Gradient support for home page */
+.home-page.bg-gradient-to-br {
+  background-image: linear-gradient(to bottom right, var(--tw-gradient-stops)) !important;
+}
+
+.home-page.from-blue-50 {
+  --tw-gradient-from: #eff6ff !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, #eff6ff) !important;
+}
+
+.home-page.to-indigo-100 {
+  --tw-gradient-to: #e0e7ff !important;
+}
+
+.dark .home-page.from-blue-50 {
+  --tw-gradient-from: #111827 !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, #111827) !important;
+}
+
+.dark .home-page.to-indigo-100 {
+  --tw-gradient-to: #1f2937 !important;
+}
+
+/* Card hover effects */
+.home-page .group:hover .transform {
+  transform: translateX(0.25rem);
+}
+
+/* Ensure smooth transitions */
+.home-page,
+.home-page * {
+  transition-property: background-color, border-color, color, fill, stroke, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}

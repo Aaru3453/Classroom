@@ -3,6 +3,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import App from "./App.jsx";
 import "./index.css";
 import { AuthProvider } from "./context/AuthContext.jsx";
+import '@fortawesome/fontawesome-free/css/all.min.css';
 
 const router = createBrowserRouter(
   [

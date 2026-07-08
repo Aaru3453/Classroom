@@ -1,4 +1,3 @@
-
 import mongoose from 'mongoose';
 
 const parallelClassSchema = new mongoose.Schema({
@@ -19,7 +18,7 @@ const parallelClassSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['Core', 'Elective', 'Lab', 'MDM','PEC','Project', 'Workshop', 'Seminar'],
+   enum: ['Theory', 'Core', 'Lab', 'MDM', 'PEC', 'Elective', 'Project', 'Workshop', 'Seminar'],
     default: 'Theory'
   },
   batchDivision: {
@@ -57,7 +56,7 @@ const scheduleEntrySchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['Core', 'Elective', 'Lab', 'MDM','PEC', 'Project', 'Workshop', 'Seminar'],
+    enum: ['Theory', 'Core', 'Lab', 'MDM', 'PEC', 'Elective', 'Project', 'Workshop', 'Seminar'],
     default: 'Theory'
   },
   batchDivision: {
@@ -125,6 +124,11 @@ const timetableSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  status: {
+    type: String,
+    enum: ['Draft', 'Published', 'Archived'],
+    default: 'Draft'
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
@@ -133,7 +137,6 @@ const timetableSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes for faster queries
 timetableSchema.index({ batch: 1, semester: 1, academicYear: 1 });
 timetableSchema.index({ status: 1 });
 

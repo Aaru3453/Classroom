@@ -1,157 +1,3 @@
-
-// import React from "react";
-// import { Routes, Route, Navigate } from "react-router-dom";
-
-// import Navbar from "./components/common/Navbar";
-// import Footer from "./components/common/Footer";
-
-// import Home from "./components/pages/Home";
-// import Login from "./components/pages/Login";
-// import Register from "./components/pages/Register";
-// import ForgotPassword from "./components/pages/ForgotPassword";
-// import ResetPassword from "./components/pages/ResetPassword";
-
-// import Dashboard from "./components/pages/Dashboard";
-// import CreateTimetable from "./components/pages/CreateTimetable";
-// import Subject from "./components/pages/Subject";
-// import Profile from "./components/pages/Profile";
-// import Faculty from "./components/pages/Faculty";
-// import Classroom from "./components/pages/Classroom";
-// import StudentBatches from "./components/pages/StudentBatches";
-// import Reports from "./components/pages/Reports";
-// import Settings from "./components/pages/Settings";
-// import Suggestions from "./components/pages/Suggestions";
-// import Contact from "./components/pages/Contact";
-
-// import ProtectedRoute from "./components/pages/ProtectedRoute";
-// import { useAuth } from "./context/AuthContext";
-
-// import { SuggestionProvider } from "./context/SuggestionContext";
-// import { SettingsProvider, useSettings } from "./context/SettingsContext";
-
-// function App() {
-//   const { user, loading } = useAuth();
-
-//   if (loading) return null;
-
-//   return (
-//     <SuggestionProvider>
-//       <div className="flex flex-col min-h-screen">
-
-//         <Navbar />
-
-//         <div className="flex-grow p-4">
-//           <Routes>
-
-//             {/* 🔹 HOME */}
-//             <Route path="/" element={<Home />} />
-
-//             {/* 🔹 AUTH */}
-//             <Route
-//               path="/login"
-//               element={user ? <Navigate to="/" /> : <Login />}
-//             />
-//             <Route
-//               path="/register"
-//               element={user ? <Navigate to="/" /> : <Register />}
-//             />
-
-//             {/* 🔹 PASSWORD */}
-//             <Route path="/forgot-password" element={<ForgotPassword />} />
-//             <Route path="/reset-password/:token" element={<ResetPassword />} />
-
-//             {/* ✅ USER + ADMIN */}
-//             <Route
-//               path="/dashboard"
-//               element={<ProtectedRoute><Dashboard /></ProtectedRoute>}
-//             />
-
-//             <Route
-//               path="/profile"
-//               element={<ProtectedRoute><Profile /></ProtectedRoute>}
-//             />
-
-//             <Route
-//               path="/suggestions"
-//               element={<ProtectedRoute><Suggestions /></ProtectedRoute>}
-//             />
-
-//             <Route
-//               path="/contact"
-//               element={<ProtectedRoute><Contact /></ProtectedRoute>}
-//             />
-
-//             {/* 🔴 ADMIN ONLY */}
-//             <Route
-//               path="/create-timetable"
-//               element={
-//                 <ProtectedRoute role="admin">
-//                   <CreateTimetable />
-//                 </ProtectedRoute>
-//               }
-//             />
-
-//             <Route
-//               path="/subject"
-//               element={
-//                 <ProtectedRoute role="admin">
-//                   <Subject />
-//                 </ProtectedRoute>
-//               }
-//             />
-
-//             <Route
-//               path="/faculty"
-//               element={
-//                 <ProtectedRoute role="admin">
-//                   <Faculty />
-//                 </ProtectedRoute>
-//               }
-//             />
-
-//             <Route
-//               path="/classrooms"
-//               element={
-//                 <ProtectedRoute role="admin">
-//                   <Classroom />
-//                 </ProtectedRoute>
-//               }
-//             />
-
-//             <Route
-//               path="/studentBatches"
-//               element={<ProtectedRoute><StudentBatches /></ProtectedRoute>}
-//             />
-
-//             <Route
-//               path="/reports"
-//               element={
-//                 <ProtectedRoute role="admin">
-//                   <Reports />
-//                 </ProtectedRoute>
-//               }
-//             />
-
-//             <Route
-//               path="/settings"
-//               element={<ProtectedRoute><Settings /></ProtectedRoute>}
-//             />
-
-//             <Route path="*" element={<Navigate to="/" />} />
-//           </Routes>
-//         </div>
-
-//         <Footer />
-//       </div>
-//     </SuggestionProvider>
-//   );
-// }
-
-// export default App;
-
-
-
-
 import React, { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
@@ -171,18 +17,17 @@ import Profile from "./components/pages/Profile";
 import Faculty from "./components/pages/Faculty";
 import Classroom from "./components/pages/Classroom";
 import StudentBatches from "./components/pages/StudentBatches";
-import Reports from "./components/pages/Reports";
 import Settings from "./components/pages/Settings";
 import Suggestions from "./components/pages/Suggestions";
 import Contact from "./components/pages/Contact";
-
+import VerifyEmail from "./components/pages/VerifyEmail";
 import ProtectedRoute from "./components/pages/ProtectedRoute";
 import { useAuth } from "./context/AuthContext";
 
 import { SuggestionProvider } from "./context/SuggestionContext";
 import { SettingsProvider, useSettings } from "./context/SettingsContext";
+import ChangePassword from './components/pages/ChangePassword';
 
-// Theme Manager Component - to apply theme globally
 const ThemeManager = ({ children }) => {
   const { settings, loading } = useSettings();
 
@@ -191,7 +36,6 @@ const ThemeManager = ({ children }) => {
       const root = document.documentElement;
       const body = document.body;
       
-      // Apply theme from settings
       if (settings.theme === "dark") {
         root.classList.add("dark");
         root.style.backgroundColor = "#111827";
@@ -242,10 +86,7 @@ function AppContent() {
 
       <div className="flex-grow p-4">
         <Routes>
-          {/* 🔹 HOME */}
           <Route path="/" element={<Home />} />
-
-          {/* 🔹 AUTH */}
           <Route
             path="/login"
             element={user ? <Navigate to="/" /> : <Login />}
@@ -255,11 +96,10 @@ function AppContent() {
             element={user ? <Navigate to="/" /> : <Register />}
           />
 
-          {/* 🔹 PASSWORD */}
           <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
+          <Route path="/reset-password/" element={<ResetPassword />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
 
-          {/* ✅ USER + ADMIN */}
           <Route
             path="/dashboard"
             element={
@@ -279,56 +119,10 @@ function AppContent() {
           />
 
           <Route
-            path="/suggestions"
+            path="/change-password"
             element={
               <ProtectedRoute>
-                <Suggestions />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/contact"
-            element={
-              <ProtectedRoute>
-                <Contact />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* 🔴 ADMIN ONLY */}
-          <Route
-            path="/create-timetable"
-            element={
-              <ProtectedRoute role="admin">
-                <CreateTimetable />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/subject"
-            element={
-              <ProtectedRoute role="admin">
-                <Subject />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/faculty"
-            element={
-              <ProtectedRoute role="admin">
-                <Faculty />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/classrooms"
-            element={
-              <ProtectedRoute role="admin">
-                <Classroom />
+                <ChangePassword />
               </ProtectedRoute>
             }
           />
@@ -343,10 +137,55 @@ function AppContent() {
           />
 
           <Route
-            path="/reports"
+            path="/subject"
             element={
-              <ProtectedRoute role="admin">
-                <Reports />
+              <ProtectedRoute  role={["admin", "faculty"]}>
+                <Subject />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/classrooms"
+            element={
+              <ProtectedRoute  role={["admin", "faculty"]}>
+                <Classroom />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/faculty"
+            element={
+              <ProtectedRoute  role={["admin", "faculty"]}>
+                <Faculty />
+              </ProtectedRoute>
+            }
+          />  
+
+          <Route
+            path="/create-timetable"
+            element={
+              <ProtectedRoute  role={["admin", "faculty"]}>
+                <CreateTimetable />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/suggestions"
+            element={
+              <ProtectedRoute>
+                <Suggestions />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/contact"
+            element={
+              <ProtectedRoute>
+                <Contact />
               </ProtectedRoute>
             }
           />
@@ -372,13 +211,12 @@ function AppContent() {
 function App() {
   return (
     <SettingsProvider>
-        <SuggestionProvider>
-          <ThemeManager>
-            <AppContent />
-          </ThemeManager>
-        </SuggestionProvider>
+      <SuggestionProvider>
+        <ThemeManager>
+          <AppContent />
+        </ThemeManager>
+      </SuggestionProvider>
     </SettingsProvider>
   );
 }
-
 export default App;

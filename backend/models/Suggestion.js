@@ -1,4 +1,3 @@
-// backend/models/Suggestion.js
 import mongoose from "mongoose";
 
 const suggestionSchema = new mongoose.Schema(
@@ -14,9 +13,21 @@ const suggestionSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
+    occupation: {
+      type: String,
+      enum: ["Student", "Teacher", "Admin", "Other"],
+      default: "Student",
+    },
     category: {
       type: String,
-      enum: ["Feature Request", "Bug Report", "Improvement", "UI/UX Feedback", "Performance", "General Feedback"],
+      enum: [
+        "Feature Request",
+        "Bug Report",
+        "Improvement",
+        "UI/UX Feedback",
+        "Performance",
+        "General Feedback",
+      ],
       default: "Feature Request",
     },
     priority: {
@@ -48,10 +59,12 @@ const suggestionSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    upvotedBy: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    }],
+    upvotedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
     adminResponse: {
       type: String,
       default: "",
@@ -60,10 +73,9 @@ const suggestionSchema = new mongoose.Schema(
       type: Date,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-// Index for better query performance
 suggestionSchema.index({ category: 1, status: 1, createdAt: -1 });
 
 const Suggestion = mongoose.model("Suggestion", suggestionSchema);

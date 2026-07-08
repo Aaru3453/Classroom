@@ -1,499 +1,13 @@
-
-
-
-// // classroom/backend/controllers/dashboardController.js
-// import mongoose from "mongoose";
-// import Dashboard from '../models/Dashboard.js';
-// import StudentBatch from '../models/StudentBatch.js'; // ✅ Fix: Use StudentBatch instead of Batch
-// import Faculty from '../models/Faculty.js';
-// import Subject from '../models/Subject.js';
-// import Classroom from '../models/Classroom.js';
-// import Timetable from '../models/Timetable.js';
-
-
-// export const getDashboardStats = async (req, res) => {
-//   try {
-//     console.log('Fetching dashboard stats...');
-
-//     // Ensure dashboard exists
-//     await Dashboard.ensureDashboard();
-
-//     // Run all aggregations in parallel
-//     const [
-//       batchStats,
-//       facultyStats,
-//       subjectStats,
-//       classroomStats,
-//       timetableStats,
-//       recentActivities,
-//       chartData
-//     ] = await Promise.all([
-//       getBatchStatistics(),
-//       getFacultyStatistics(),
-//       getSubjectStatistics(),
-//       getClassroomStatistics(),
-//       getTimetableStatistics(),
-//       getRecentActivities(),
-//       getAllChartData()
-//     ]);
-
-//     console.log('Batch Stats:', batchStats); // Debug log
-
-//     // Update dashboard
-//     const dashboard = await Dashboard.findByIdAndUpdate('dashboard', {
-//       stats: {
-//         ...batchStats,
-//         ...facultyStats,
-//         ...subjectStats,
-//         ...classroomStats,
-//         ...timetableStats
-//       },
-//       charts: chartData,
-//       recentActivities: recentActivities.slice(0, 10),
-//       resourceUtilization: {
-//         classrooms: await getClassroomUtilization(),
-//         facultyWorkload: await getFacultyWorkloadDistribution()
-//       },
-//       lastUpdated: new Date()
-//     }, { new: true, upsert: true });
-
-//     res.status(200).json({
-//       success: true,
-//       data: dashboard
-//     });
-//   } catch (error) {
-//     console.error('Dashboard stats error:', error);
-//     res.status(500).json({
-//       success: false,
-//       message: 'Error fetching dashboard statistics',
-//       error: error.message
-//     });
-//   }
-// };
-
-// // @desc    Get dashboard data (cached version)
-// // @route   GET /api/dashboard
-// // @access  Private
-// export const getDashboard = async (req, res) => {
-//   try {
-//     let dashboard = await Dashboard.findById('dashboard');
-
-//     // If no dashboard exists or data is older than 5 minutes, refresh
-//     if (!dashboard || (Date.now() - new Date(dashboard.lastUpdated).getTime()) > 5 * 60 * 1000) {
-//       return getDashboardStats(req, res);
-//     }
-
-//     res.status(200).json({
-//       success: true,
-//       data: dashboard
-//     });
-//   } catch (error) {
-//     console.error('Dashboard fetch error:', error);
-//     res.status(500).json({
-//       success: false,
-//       message: 'Error fetching dashboard',
-//       error: error.message
-//     });
-//   }
-// };
-
-// // @desc    Refresh dashboard data manually
-// // @route   POST /api/dashboard/refresh
-// // @access  Private
-// export const refreshDashboard = async (req, res) => {
-//   try {
-//     await Dashboard.findByIdAndDelete('dashboard');
-//     return getDashboardStats(req, res);
-//   } catch (error) {
-//     console.error('Dashboard refresh error:', error);
-//     res.status(500).json({
-//       success: false,
-//       message: 'Error refreshing dashboard',
-//       error: error.message
-//     });
-//   }
-// };
-
-// // ✅ FIXED: Helper functions using StudentBatch
-// const getBatchStatistics = async () => {
-//   try {
-//     const batches = await StudentBatch.find(); // ✅ Use StudentBatch model
-
-//     console.log('Total batches found:', batches.length); // Debug log
-
-//     const totalBatches = batches.length;
-//     const activeBatches = batches.filter(b => b.status === 'Active').length;
-//     const totalStudents = batches.reduce((sum, b) => sum + (b.totalStudents || 0), 0);
-
-//     return { totalBatches, activeBatches, totalStudents };
-//   } catch (error) {
-//     console.error('Error in getBatchStatistics:', error);
-//     return { totalBatches: 0, activeBatches: 0, totalStudents: 0 };
-//   }
-// };
-
-// const getFacultyStatistics = async () => {
-//   try {
-//     const faculties = await Faculty.find();
-//     const totalFaculty = faculties.length;
-//     return { totalFaculty };
-//   } catch (error) {
-//     console.error('Error in getFacultyStatistics:', error);
-//     return { totalFaculty: 0 };
-//   }
-// };
-
-// const getSubjectStatistics = async () => {
-//   try {
-//     const subjects = await Subject.find();
-//     const totalSubjects = subjects.length;
-//     return { totalSubjects };
-//   } catch (error) {
-//     console.error('Error in getSubjectStatistics:', error);
-//     return { totalSubjects: 0 };
-//   }
-// };
-
-// const getClassroomStatistics = async () => {
-//   try {
-//     const classrooms = await Classroom.find();
-//     const totalClassrooms = classrooms.length;
-//     const availableClassrooms = classrooms.filter(c => c.availability === 'Available').length;
-//     return { totalClassrooms, availableClassrooms };
-//   } catch (error) {
-//     console.error('Error in getClassroomStatistics:', error);
-//     return { totalClassrooms: 0, availableClassrooms: 0 };
-//   }
-// };
-
-// const getTimetableStatistics = async () => {
-//   try {
-//     const timetables = await Timetable.find().populate('batch', 'name');
-//     const totalTimetables = timetables.length;
-//     const publishedTimetables = timetables.filter(t => t.status === 'Published').length;
-//     return { totalTimetables, publishedTimetables };
-//   } catch (error) {
-//     console.error('Error in getTimetableStatistics:', error);
-//     return { totalTimetables: 0, publishedTimetables: 0 };
-//   }
-// };
-
-// const getAllChartData = async () => {
-//   try {
-//     const [
-//       batchesByDepartment,
-//       facultyByDepartment,
-//       subjectsByType,
-//       classroomsByType,
-//       timetablesByStatus,
-//       timetableCompletion
-//     ] = await Promise.all([
-//       getBatchesByDepartment(),
-//       getFacultyByDepartment(),
-//       getSubjectsByType(),
-//       getClassroomsByType(),
-//       getTimetablesByStatus(),
-//       getTimetableCompletion()
-//     ]);
-
-//     return {
-//       batchesByDepartment,
-//       facultyByDepartment,
-//       subjectsByType,
-//       classroomsByType,
-//       timetablesByStatus,
-//       timetableCompletion
-//     };
-//   } catch (error) {
-//     console.error('Error in getAllChartData:', error);
-//     return {
-//       batchesByDepartment: [],
-//       facultyByDepartment: [],
-//       subjectsByType: [],
-//       classroomsByType: [],
-//       timetablesByStatus: [],
-//       timetableCompletion: []
-//     };
-//   }
-// };
-
-// // ✅ FIXED: Using StudentBatch
-// const getBatchesByDepartment = async () => {
-//   try {
-//     const batches = await StudentBatch.find();
-//     const departments = [...new Set(batches.map(b => b.department).filter(Boolean))];
-
-//     if (departments.length === 0) {
-//       return [];
-//     }
-//     return departments.map(dept => ({
-//       department: dept || 'Unknown',
-//       count: batches.filter(b => b.department === dept).length,
-//       students: batches
-//         .filter(b => b.department === dept)
-//         .reduce((sum, b) => sum + (b.totalStudents || 0), 0)
-//     }));
-//   } catch (error) {
-//     console.error('Error in getBatchesByDepartment:', error);
-//     return [];
-//   }
-// };
-
-// const getFacultyByDepartment = async () => {
-//   try {
-//     const faculties = await Faculty.find();
-//     const departments = [...new Set(faculties.map(f => f.department).filter(Boolean))];
-
-//     if (departments.length === 0) {
-//       return [];
-//     }
-
-//     return departments.map(dept => {
-//       const deptFaculties = faculties.filter(f => f.department === dept);
-//       return {
-//         department: dept || 'Unknown',
-//         count: deptFaculties.length,
-//         avgWorkload: deptFaculties.length > 0
-//           ? Math.round(deptFaculties.reduce((sum, f) => sum + (f.workload || 0), 0) / deptFaculties.length)
-//           : 0
-//       };
-//     });
-//   } catch (error) {
-//     console.error('Error in getFacultyByDepartment:', error);
-//     return [];
-//   }
-// };
-
-// const getSubjectsByType = async () => {
-//   try {
-//     const subjects = await Subject.find();
-//     const types = [...new Set(subjects.map(s => s.type).filter(Boolean))];
-
-//     if (types.length === 0) {
-//       return [];
-//     }
-
-//     return types.map(type => ({
-//       type: type || 'Unknown',
-//       count: subjects.filter(s => s.type === type).length,
-//       totalCredits: subjects
-//         .filter(s => s.type === type)
-//         .reduce((sum, s) => sum + (s.credits || 0), 0)
-//     }));
-//   } catch (error) {
-//     console.error('Error in getSubjectsByType:', error);
-//     return [];
-//   }
-// };
-
-// const getClassroomsByType = async () => {
-//   try {
-//     const classrooms = await Classroom.find();
-
-//     const types = [...new Set(classrooms.map(c => c.type).filter(Boolean))];
-
-//     if (types.length === 0) {
-//       return []; // Return empty array if no data
-//     }
-
-//     return types.map(type => ({
-//       type: type || 'Unknown',
-//       count: classrooms.filter(c => c.type === type).length,
-//       totalCapacity: classrooms
-//         .filter(c => c.type === type)
-//         .reduce((sum, c) => sum + (c.capacity || 0), 0)
-//     }));
-//   } catch (error) {
-//     console.error('Error in getClassroomsByType:', error);
-//     return []; // Return empty array on error
-//   }
-// };
-
-// const getTimetablesByStatus = async () => {
-//   try {
-//     const timetables = await Timetable.find();
-
-//     return statuses.map(status => ({
-//       status,
-//       count: timetables.filter(t => t.status === status).length
-//     }));
-//   } catch (error) {
-//     console.error('Error in getTimetablesByStatus:', error);
-//     return [];
-//   }
-// };
-
-// const getTimetableCompletion = async () => {
-//   try {
-//     const timetables = await Timetable.find()
-//       .populate('batch', 'name')
-//       .limit(5);
-
-//     if (timetables.length === 0) {
-//       return [];
-//     }
-
-//     return timetables.map(t => ({
-//       batch: t.batch?.name || 'Unknown Batch',
-//       scheduled: t.schedule?.length || 0,
-//       total: 30,
-//       percentage: Math.min(100, Math.round(((t.schedule?.length || 0) / 30) * 100))
-//     }));
-//   } catch (error) {
-//     console.error('Error in getTimetableCompletion:', error);
-//     return [];
-//   }
-// };
-
-// const getClassroomUtilization = async () => {
-//   try {
-//     const classrooms = await Classroom.find();
-//     const buildings = [...new Set(classrooms.map(c => c.building).filter(Boolean))];
-
-//     return buildings.map(building => {
-//       const buildingClassrooms = classrooms.filter(c => c.building === building);
-//       return {
-//         building,
-//         total: buildingClassrooms.length,
-//         inUse: buildingClassrooms.filter(c => c.availability === 'In Use').length,
-//         available: buildingClassrooms.filter(c => c.availability === 'Available').length,
-//         maintenance: buildingClassrooms.filter(c => c.availability === 'Under Maintenance').length
-//       };
-//     });
-//   } catch (error) {
-//     console.error('Error in getClassroomUtilization:', error);
-//     return [];
-//   }
-// };
-
-// const getFacultyWorkloadDistribution = async () => {
-//   try {
-//     const faculties = await Faculty.find();
-//     const workloads = faculties.map(f => f.workload || 0);
-
-//     const ranges = [
-//       { range: '0-5 hours', count: workloads.filter(w => w <= 5).length },
-//       { range: '6-10 hours', count: workloads.filter(w => w > 5 && w <= 10).length },
-//       { range: '11-15 hours', count: workloads.filter(w => w > 10 && w <= 15).length },
-//       { range: '16-20 hours', count: workloads.filter(w => w > 15 && w <= 20).length },
-//       { range: '20+ hours', count: workloads.filter(w => w > 20).length }
-//     ];
-
-//     return ranges;
-//   } catch (error) {
-//     console.error('Error in getFacultyWorkloadDistribution:', error);
-//     return [];
-//   }
-// };
-
-// const getRecentActivities = async () => {
-//   try {
-//     const activities = [];
-
-//     // Get recent batches from StudentBatch
-//     const recentBatches = await StudentBatch.find()
-//       .sort({ createdAt: -1 })
-//       .limit(3);
-
-//     recentBatches.forEach(b => {
-//       activities.push({
-//         type: 'batch',
-//         action: 'created',
-//         itemId: b._id,
-//         itemName: b.name,
-//         description: `New batch "${b.name}" created`,
-//         timestamp: b.createdAt || new Date()
-//       });
-//     });
-
-//     // Get recent faculty
-//     const recentFaculty = await Faculty.find()
-//       .sort({ createdAt: -1 })
-//       .limit(3);
-
-//     recentFaculty.forEach(f => {
-//       activities.push({
-//         type: 'faculty',
-//         action: 'created',
-//         itemId: f._id,
-//         itemName: f.name,
-//         description: `New faculty "${f.name}" added`,
-//         timestamp: f.createdAt || new Date()
-//       });
-//     });
-
-//     // Get recent timetables
-//     const recentTimetables = await Timetable.find()
-//       .populate('batch', 'name')
-//       .sort({ createdAt: -1 })
-//       .limit(3);
-
-//     recentTimetables.forEach(t => {
-//       activities.push({
-//         type: 'timetable',
-//         action: 'created',
-//         itemId: t._id,
-//         itemName: t.name,
-//         description: `New timetable "${t.name}" created for ${t.batch?.name || 'batch'}`,
-//         timestamp: t.createdAt || new Date()
-//       });
-//     });
-
-//     // Get recent subjects
-//     const recentSubjects = await Subject.find()
-//       .sort({ createdAt: -1 })
-//       .limit(3);
-
-//     recentSubjects.forEach(s => {
-//       activities.push({
-//         type: 'subject',
-//         action: 'created',
-//         itemId: s._id,
-//         itemName: s.name,
-//         description: `New subject "${s.name}" added`,
-//         timestamp: s.createdAt || new Date()
-//       });
-//     });
-
-//     // Get recent classrooms
-//     const recentClassrooms = await Classroom.find()
-//       .sort({ createdAt: -1 })
-//       .limit(3);
-
-//     recentClassrooms.forEach(c => {
-//       activities.push({
-//         type: 'classroom',
-//         action: 'created',
-//         itemId: c._id,
-//         itemName: c.name,
-//         description: `New classroom "${c.name}" added`,
-//         timestamp: c.createdAt || new Date()
-//       });
-//     });
-
-//     // Sort by timestamp and return
-//     return activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-//   } catch (error) {
-//     console.error('Error in getRecentActivities:', error);
-//     return [];
-//   }
-// };
-
-
-// classroom/backend/controllers/dashboardController.js
 import mongoose from "mongoose";
-import Dashboard from '../models/Dashboard.js';
-import StudentBatch from '../models/StudentBatch.js';
-import Faculty from '../models/Faculty.js';
-import Subject from '../models/Subject.js';
-import Classroom from '../models/Classroom.js';
-import Timetable from '../models/Timetable.js';
-
+import Dashboard from "../models/Dashboard.js";
+import StudentBatch from "../models/StudentBatch.js";
+import Faculty from "../models/Faculty.js";
+import Subject from "../models/Subject.js";
+import Classroom from "../models/Classroom.js";
+import Timetable from "../models/Timetable.js";
 
 export const getDashboardStats = async (req, res) => {
   try {
-    console.log('Fetching dashboard stats...');
-
     await Dashboard.ensureDashboard();
 
     const [
@@ -503,7 +17,7 @@ export const getDashboardStats = async (req, res) => {
       classroomStats,
       timetableStats,
       recentActivities,
-      chartData
+      chartData,
     ] = await Promise.all([
       getBatchStatistics(),
       getFacultyStatistics(),
@@ -511,75 +25,59 @@ export const getDashboardStats = async (req, res) => {
       getClassroomStatistics(),
       getTimetableStatistics(),
       getRecentActivities(),
-      getAllChartData()
+      getAllChartData(),
     ]);
-
-    console.log('Timetable Stats:', timetableStats);
     console.log('Timetable Chart Data:', chartData.timetablesByStatus);
 
-    const dashboard = await Dashboard.findByIdAndUpdate('dashboard', {
-      stats: {
-        ...batchStats,
-        ...facultyStats,
-        ...subjectStats,
-        ...classroomStats,
-        ...timetableStats
+    const dashboard = await Dashboard.findByIdAndUpdate(
+      "dashboard",
+      {
+        stats: {
+          ...batchStats,
+          ...facultyStats,
+          ...subjectStats,
+          ...classroomStats,
+          ...timetableStats,
+        },
+        charts: chartData,
+        recentActivities: recentActivities.slice(0, 10),
+        resourceUtilization: {
+          classrooms: await getClassroomUtilization(),
+          facultyWorkload: await getFacultyWorkloadDistribution(),
+        },
+        lastUpdated: new Date(),
       },
-      charts: chartData,
-      recentActivities: recentActivities.slice(0, 10),
-      resourceUtilization: {
-        classrooms: await getClassroomUtilization(),
-        facultyWorkload: await getFacultyWorkloadDistribution()
-      },
-      lastUpdated: new Date()
-    }, { new: true, upsert: true });
+      { new: true, upsert: true },
+    );
 
     res.status(200).json({
       success: true,
-      data: dashboard
+      data: dashboard,
     });
   } catch (error) {
-    console.error('Dashboard stats error:', error);
+    console.error("Dashboard stats error:", error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching dashboard statistics',
-      error: error.message
+      message: "Error fetching dashboard statistics",
+      error: error.message,
     });
   }
 };
 
 export const getDashboard = async (req, res) => {
-  try {
-    let dashboard = await Dashboard.findById('dashboard');
-
-    if (!dashboard || (Date.now() - new Date(dashboard.lastUpdated).getTime()) > 5 * 60 * 1000) {
-      return getDashboardStats(req, res);
-    }
-
-    res.status(200).json({
-      success: true,
-      data: dashboard
-    });
-  } catch (error) {
-    console.error('Dashboard fetch error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching dashboard',
-      error: error.message
-    });
-  }
+  return getDashboardStats(req, res);
 };
 
 export const refreshDashboard = async (req, res) => {
   try {
-    await Dashboard.findByIdAndDelete('dashboard');
+    await Dashboard.findByIdAndDelete("dashboard");
     return getDashboardStats(req, res);
   } catch (error) {
-    console.error('Dashboard refresh error:', error);
+    console.error("Dashboard refresh error:", error);
     res.status(500).json({
       success: false,
-      message: 'Error refreshing dashboard',
-      error: error.message
+      message: "Error refreshing dashboard",
+      error: error.message,
     });
   }
 };
@@ -588,12 +86,15 @@ const getBatchStatistics = async () => {
   try {
     const batches = await StudentBatch.find();
     const totalBatches = batches.length;
-    const activeBatches = batches.filter(b => b.status === 'Active').length;
-    const totalStudents = batches.reduce((sum, b) => sum + (b.totalStudents || 0), 0);
+    const activeBatches = batches.filter((b) => b.status === "Active").length;
+    const totalStudents = batches.reduce(
+      (sum, b) => sum + (b.totalStudents || 0),
+      0,
+    );
 
     return { totalBatches, activeBatches, totalStudents };
   } catch (error) {
-    console.error('Error in getBatchStatistics:', error);
+    console.error("Error in getBatchStatistics:", error);
     return { totalBatches: 0, activeBatches: 0, totalStudents: 0 };
   }
 };
@@ -604,7 +105,7 @@ const getFacultyStatistics = async () => {
     const totalFaculty = faculties.length;
     return { totalFaculty };
   } catch (error) {
-    console.error('Error in getFacultyStatistics:', error);
+    console.error("Error in getFacultyStatistics:", error);
     return { totalFaculty: 0 };
   }
 };
@@ -615,7 +116,7 @@ const getSubjectStatistics = async () => {
     const totalSubjects = subjects.length;
     return { totalSubjects };
   } catch (error) {
-    console.error('Error in getSubjectStatistics:', error);
+    console.error("Error in getSubjectStatistics:", error);
     return { totalSubjects: 0 };
   }
 };
@@ -624,10 +125,12 @@ const getClassroomStatistics = async () => {
   try {
     const classrooms = await Classroom.find();
     const totalClassrooms = classrooms.length;
-    const availableClassrooms = classrooms.filter(c => c.availability === 'Available').length;
+    const availableClassrooms = classrooms.filter(
+      (c) => c.availability === "Available",
+    ).length;
     return { totalClassrooms, availableClassrooms };
   } catch (error) {
-    console.error('Error in getClassroomStatistics:', error);
+    console.error("Error in getClassroomStatistics:", error);
     return { totalClassrooms: 0, availableClassrooms: 0 };
   }
 };
@@ -636,55 +139,46 @@ const getTimetableStatistics = async () => {
   try {
     const timetables = await Timetable.find();
     const totalTimetables = timetables.length;
-    
-    // 🔥 FIX: Agar timetable hai toh woh active hi consider karo
-    // Timetable ke status ko map karo - agar status 'Active' ya 'Published' ya kuch bhi ho, 
-    // agar timetable exist karta hai toh woh active hai
+
     let activeTimetables = 0;
     let draftTimetables = 0;
     let archivedTimetables = 0;
-    
-    timetables.forEach(timetable => {
+
+    timetables.forEach((timetable) => {
       const status = timetable.status?.toLowerCase();
-      if (status === 'active' || status === 'published') {
+      if (status === "active" || status === "published") {
         activeTimetables++;
-      } else if (status === 'draft') {
+      } else if (status === "draft") {
         draftTimetables++;
-      } else if (status === 'archived') {
+      } else if (status === "archived") {
         archivedTimetables++;
       } else {
-        // Agar koi status nahi hai ya kuch aur hai, toh active consider karo
         activeTimetables++;
       }
     });
-    
-    // 🔥 IMPORTANT: Agar totalTimetables > 0 hai aur activeTimetables 0 hai,
-    // toh saare timetables ko active consider karo
-    if (totalTimetables > 0 && activeTimetables === 0 && draftTimetables === 0 && archivedTimetables === 0) {
+
+    if (
+      totalTimetables > 0 &&
+      activeTimetables === 0 &&
+      draftTimetables === 0 &&
+      archivedTimetables === 0
+    ) {
       activeTimetables = totalTimetables;
     }
-    
-    console.log('Timetable stats details:', { 
-      totalTimetables, 
-      activeTimetables, 
-      draftTimetables, 
-      archivedTimetables,
-      rawStatuses: timetables.map(t => ({ name: t.name, status: t.status }))
-    });
-    
-    return { 
-      totalTimetables, 
+
+    return {
+      totalTimetables,
       activeTimetables,
       draftTimetables,
-      archivedTimetables
+      archivedTimetables,
     };
   } catch (error) {
-    console.error('Error in getTimetableStatistics:', error);
-    return { 
-      totalTimetables: 0, 
+    console.error("Error in getTimetableStatistics:", error);
+    return {
+      totalTimetables: 0,
       activeTimetables: 0,
       draftTimetables: 0,
-      archivedTimetables: 0
+      archivedTimetables: 0,
     };
   }
 };
@@ -697,14 +191,14 @@ const getAllChartData = async () => {
       subjectsByType,
       classroomsByType,
       timetablesByStatus,
-      timetableCompletion
+      timetableCompletion,
     ] = await Promise.all([
       getBatchesByDepartment(),
       getFacultyByDepartment(),
       getSubjectsByType(),
       getClassroomsByType(),
       getTimetablesByStatus(),
-      getTimetableCompletion()
+      getTimetableCompletion(),
     ]);
 
     return {
@@ -713,17 +207,17 @@ const getAllChartData = async () => {
       subjectsByType,
       classroomsByType,
       timetablesByStatus,
-      timetableCompletion
+      timetableCompletion,
     };
   } catch (error) {
-    console.error('Error in getAllChartData:', error);
+    console.error("Error in getAllChartData:", error);
     return {
       batchesByDepartment: [],
       facultyByDepartment: [],
       subjectsByType: [],
       classroomsByType: [],
       timetablesByStatus: [],
-      timetableCompletion: []
+      timetableCompletion: [],
     };
   }
 };
@@ -731,20 +225,22 @@ const getAllChartData = async () => {
 const getBatchesByDepartment = async () => {
   try {
     const batches = await StudentBatch.find();
-    const departments = [...new Set(batches.map(b => b.department).filter(Boolean))];
+    const departments = [
+      ...new Set(batches.map((b) => b.department).filter(Boolean)),
+    ];
 
     if (departments.length === 0) {
       return [];
     }
-    return departments.map(dept => ({
-      department: dept || 'Unknown',
-      count: batches.filter(b => b.department === dept).length,
+    return departments.map((dept) => ({
+      department: dept || "Unknown",
+      count: batches.filter((b) => b.department === dept).length,
       students: batches
-        .filter(b => b.department === dept)
-        .reduce((sum, b) => sum + (b.totalStudents || 0), 0)
+        .filter((b) => b.department === dept)
+        .reduce((sum, b) => sum + (b.totalStudents || 0), 0),
     }));
   } catch (error) {
-    console.error('Error in getBatchesByDepartment:', error);
+    console.error("Error in getBatchesByDepartment:", error);
     return [];
   }
 };
@@ -752,24 +248,30 @@ const getBatchesByDepartment = async () => {
 const getFacultyByDepartment = async () => {
   try {
     const faculties = await Faculty.find();
-    const departments = [...new Set(faculties.map(f => f.department).filter(Boolean))];
+    const departments = [
+      ...new Set(faculties.map((f) => f.department).filter(Boolean)),
+    ];
 
     if (departments.length === 0) {
       return [];
     }
 
-    return departments.map(dept => {
-      const deptFaculties = faculties.filter(f => f.department === dept);
+    return departments.map((dept) => {
+      const deptFaculties = faculties.filter((f) => f.department === dept);
       return {
-        department: dept || 'Unknown',
+        department: dept || "Unknown",
         count: deptFaculties.length,
-        avgWorkload: deptFaculties.length > 0
-          ? Math.round(deptFaculties.reduce((sum, f) => sum + (f.workload || 0), 0) / deptFaculties.length)
-          : 0
+        avgWorkload:
+          deptFaculties.length > 0
+            ? Math.round(
+                deptFaculties.reduce((sum, f) => sum + (f.workload || 0), 0) /
+                  deptFaculties.length,
+              )
+            : 0,
       };
     });
   } catch (error) {
-    console.error('Error in getFacultyByDepartment:', error);
+    console.error("Error in getFacultyByDepartment:", error);
     return [];
   }
 };
@@ -777,21 +279,21 @@ const getFacultyByDepartment = async () => {
 const getSubjectsByType = async () => {
   try {
     const subjects = await Subject.find();
-    const types = [...new Set(subjects.map(s => s.type).filter(Boolean))];
+    const types = [...new Set(subjects.map((s) => s.type).filter(Boolean))];
 
     if (types.length === 0) {
       return [];
     }
 
-    return types.map(type => ({
-      type: type || 'Unknown',
-      count: subjects.filter(s => s.type === type).length,
+    return types.map((type) => ({
+      type: type || "Unknown",
+      count: subjects.filter((s) => s.type === type).length,
       totalCredits: subjects
-        .filter(s => s.type === type)
-        .reduce((sum, s) => sum + (s.credits || 0), 0)
+        .filter((s) => s.type === type)
+        .reduce((sum, s) => sum + (s.credits || 0), 0),
     }));
   } catch (error) {
-    console.error('Error in getSubjectsByType:', error);
+    console.error("Error in getSubjectsByType:", error);
     return [];
   }
 };
@@ -800,78 +302,70 @@ const getClassroomsByType = async () => {
   try {
     const classrooms = await Classroom.find();
 
-    const types = [...new Set(classrooms.map(c => c.type).filter(Boolean))];
+    const types = [...new Set(classrooms.map((c) => c.type).filter(Boolean))];
 
     if (types.length === 0) {
       return [];
     }
 
-    return types.map(type => ({
-      type: type || 'Unknown',
-      count: classrooms.filter(c => c.type === type).length,
+    return types.map((type) => ({
+      type: type || "Unknown",
+      count: classrooms.filter((c) => c.type === type).length,
       totalCapacity: classrooms
-        .filter(c => c.type === type)
-        .reduce((sum, c) => sum + (c.capacity || 0), 0)
+        .filter((c) => c.type === type)
+        .reduce((sum, c) => sum + (c.capacity || 0), 0),
     }));
   } catch (error) {
-    console.error('Error in getClassroomsByType:', error);
+    console.error("Error in getClassroomsByType:", error);
     return [];
   }
 };
 
-// 🔥 FIXED: Timetable status ko properly map karo
 const getTimetablesByStatus = async () => {
   try {
     const timetables = await Timetable.find();
-    
-    console.log('All timetables from DB:', timetables.map(t => ({ id: t._id, name: t.name, status: t.status })));
-    
-    // Agar koi timetable nahi hai
+
     if (timetables.length === 0) {
-      console.log('No timetables found');
+      console.log("No timetables found");
       return [];
     }
-    
-    // Status ke according group karo
+
     const statusCount = {
-      'Active': 0,
-      'Draft': 0,
-      'Archived': 0
+      Active: 0,
+      Draft: 0,
+      Archived: 0,
     };
-    
-    timetables.forEach(timetable => {
+
+    timetables.forEach((timetable) => {
       let status = timetable.status;
-      
-      // Agar status null/undefined/empty hai toh 'Active' consider karo
-      if (!status || status === '') {
-        status = 'Active';
+
+      if (!status || status === "") {
+        status = "Active";
       }
-      
-      // Normalize status
-      if (status.toLowerCase() === 'active' || status.toLowerCase() === 'published') {
-        statusCount['Active']++;
-      } else if (status.toLowerCase() === 'draft') {
-        statusCount['Draft']++;
-      } else if (status.toLowerCase() === 'archived') {
-        statusCount['Archived']++;
+
+      if (
+        status.toLowerCase() === "active" ||
+        status.toLowerCase() === "published"
+      ) {
+        statusCount["Active"]++;
+      } else if (status.toLowerCase() === "draft") {
+        statusCount["Draft"]++;
+      } else if (status.toLowerCase() === "archived") {
+        statusCount["Archived"]++;
       } else {
-        // Koi aur status hai toh bhi 'Active' mein daalo
-        statusCount['Active']++;
+        statusCount["Active"]++;
       }
     });
-    
-    // Convert to array format
+
     const result = [
-      { status: 'Active', count: statusCount['Active'] },
-      { status: 'Draft', count: statusCount['Draft'] },
-      { status: 'Archived', count: statusCount['Archived'] }
-    ].filter(item => item.count > 0); // Sirf wahi status dikhao jinka count > 0 hai
-    
-    console.log('Timetables by status result:', result);
+      { status: "Active", count: statusCount["Active"] },
+      { status: "Draft", count: statusCount["Draft"] },
+      { status: "Archived", count: statusCount["Archived"] },
+    ].filter((item) => item.count > 0); 
+
     return result;
-    
   } catch (error) {
-    console.error('Error in getTimetablesByStatus:', error);
+    console.error("Error in getTimetablesByStatus:", error);
     return [];
   }
 };
@@ -879,21 +373,24 @@ const getTimetablesByStatus = async () => {
 const getTimetableCompletion = async () => {
   try {
     const timetables = await Timetable.find()
-      .populate('batch', 'name')
+      .populate("batch", "name")
       .limit(5);
 
     if (timetables.length === 0) {
       return [];
     }
 
-    return timetables.map(t => ({
-      batch: t.batch?.name || 'Unknown Batch',
+    return timetables.map((t) => ({
+      batch: t.batch?.name || "Unknown Batch",
       scheduled: t.schedule?.length || 0,
       total: 30,
-      percentage: Math.min(100, Math.round(((t.schedule?.length || 0) / 30) * 100))
+      percentage: Math.min(
+        100,
+        Math.round(((t.schedule?.length || 0) / 30) * 100),
+      ),
     }));
   } catch (error) {
-    console.error('Error in getTimetableCompletion:', error);
+    console.error("Error in getTimetableCompletion:", error);
     return [];
   }
 };
@@ -901,20 +398,29 @@ const getTimetableCompletion = async () => {
 const getClassroomUtilization = async () => {
   try {
     const classrooms = await Classroom.find();
-    const buildings = [...new Set(classrooms.map(c => c.building).filter(Boolean))];
+    const buildings = [
+      ...new Set(classrooms.map((c) => c.building).filter(Boolean)),
+    ];
 
-    return buildings.map(building => {
-      const buildingClassrooms = classrooms.filter(c => c.building === building);
+    return buildings.map((building) => {
+      const buildingClassrooms = classrooms.filter(
+        (c) => c.building === building,
+      );
       return {
         building,
         total: buildingClassrooms.length,
-        inUse: buildingClassrooms.filter(c => c.availability === 'In Use').length,
-        available: buildingClassrooms.filter(c => c.availability === 'Available').length,
-        maintenance: buildingClassrooms.filter(c => c.availability === 'Under Maintenance').length
+        inUse: buildingClassrooms.filter((c) => c.availability === "In Use")
+          .length,
+        available: buildingClassrooms.filter(
+          (c) => c.availability === "Available",
+        ).length,
+        maintenance: buildingClassrooms.filter(
+          (c) => c.availability === "Under Maintenance",
+        ).length,
       };
     });
   } catch (error) {
-    console.error('Error in getClassroomUtilization:', error);
+    console.error("Error in getClassroomUtilization:", error);
     return [];
   }
 };
@@ -922,19 +428,28 @@ const getClassroomUtilization = async () => {
 const getFacultyWorkloadDistribution = async () => {
   try {
     const faculties = await Faculty.find();
-    const workloads = faculties.map(f => f.workload || 0);
+    const workloads = faculties.map((f) => f.workload || 0);
 
     const ranges = [
-      { range: '0-5 hours', count: workloads.filter(w => w <= 5).length },
-      { range: '6-10 hours', count: workloads.filter(w => w > 5 && w <= 10).length },
-      { range: '11-15 hours', count: workloads.filter(w => w > 10 && w <= 15).length },
-      { range: '16-20 hours', count: workloads.filter(w => w > 15 && w <= 20).length },
-      { range: '20+ hours', count: workloads.filter(w => w > 20).length }
+      { range: "0-5 hours", count: workloads.filter((w) => w <= 5).length },
+      {
+        range: "6-10 hours",
+        count: workloads.filter((w) => w > 5 && w <= 10).length,
+      },
+      {
+        range: "11-15 hours",
+        count: workloads.filter((w) => w > 10 && w <= 15).length,
+      },
+      {
+        range: "16-20 hours",
+        count: workloads.filter((w) => w > 15 && w <= 20).length,
+      },
+      { range: "20+ hours", count: workloads.filter((w) => w > 20).length },
     ];
 
     return ranges;
   } catch (error) {
-    console.error('Error in getFacultyWorkloadDistribution:', error);
+    console.error("Error in getFacultyWorkloadDistribution:", error);
     return [];
   }
 };
@@ -947,45 +462,43 @@ const getRecentActivities = async () => {
       .sort({ createdAt: -1 })
       .limit(3);
 
-    recentBatches.forEach(b => {
+    recentBatches.forEach((b) => {
       activities.push({
-        type: 'batch',
-        action: 'created',
+        type: "Studentbatch",
+        action: "created",
         itemId: b._id,
         itemName: b.name,
         description: `New batch "${b.name}" created`,
-        timestamp: b.createdAt || new Date()
+        timestamp: b.createdAt || new Date(),
       });
     });
 
-    const recentFaculty = await Faculty.find()
-      .sort({ createdAt: -1 })
-      .limit(3);
+    const recentFaculty = await Faculty.find().sort({ createdAt: -1 }).limit(3);
 
-    recentFaculty.forEach(f => {
+    recentFaculty.forEach((f) => {
       activities.push({
-        type: 'faculty',
-        action: 'created',
+        type: "faculty",
+        action: "created",
         itemId: f._id,
         itemName: f.name,
         description: `New faculty "${f.name}" added`,
-        timestamp: f.createdAt || new Date()
+        timestamp: f.createdAt || new Date(),
       });
     });
 
     const recentTimetables = await Timetable.find()
-      .populate('batch', 'name')
+      .populate("batch", "name")
       .sort({ createdAt: -1 })
       .limit(3);
 
-    recentTimetables.forEach(t => {
+    recentTimetables.forEach((t) => {
       activities.push({
-        type: 'timetable',
-        action: 'created',
+        type: "timetable",
+        action: "created",
         itemId: t._id,
         itemName: t.name,
-        description: `New timetable "${t.name}" created for ${t.batch?.name || 'batch'}`,
-        timestamp: t.createdAt || new Date()
+        description: `New timetable "${t.name}" created for ${t.batch?.name || "batch"}`,
+        timestamp: t.createdAt || new Date(),
       });
     });
 
@@ -993,14 +506,14 @@ const getRecentActivities = async () => {
       .sort({ createdAt: -1 })
       .limit(3);
 
-    recentSubjects.forEach(s => {
+    recentSubjects.forEach((s) => {
       activities.push({
-        type: 'subject',
-        action: 'created',
+        type: "subject",
+        action: "created",
         itemId: s._id,
         itemName: s.name,
         description: `New subject "${s.name}" added`,
-        timestamp: s.createdAt || new Date()
+        timestamp: s.createdAt || new Date(),
       });
     });
 
@@ -1008,20 +521,22 @@ const getRecentActivities = async () => {
       .sort({ createdAt: -1 })
       .limit(3);
 
-    recentClassrooms.forEach(c => {
+    recentClassrooms.forEach((c) => {
       activities.push({
-        type: 'classroom',
-        action: 'created',
+        type: "classroom",
+        action: "created",
         itemId: c._id,
         itemName: c.name,
         description: `New classroom "${c.name}" added`,
-        timestamp: c.createdAt || new Date()
+        timestamp: c.createdAt || new Date(),
       });
     });
 
-    return activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    return activities.sort(
+      (a, b) => new Date(b.timestamp) - new Date(a.timestamp),
+    );
   } catch (error) {
-    console.error('Error in getRecentActivities:', error);
+    console.error("Error in getRecentActivities:", error);
     return [];
   }
 };

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useSettings } from "../../context/SettingsContext";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const Contact = () => {
   const { settings } = useSettings();
   const [formData, setFormData] = useState({
@@ -17,7 +19,6 @@ const Contact = () => {
   const [ticketNumber, setTicketNumber] = useState("");
   const [error, setError] = useState(null);
 
-  // Force apply theme from localStorage
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") || "light";
     const root = document.documentElement;
@@ -61,7 +62,7 @@ const Contact = () => {
     setError(null);
 
     try {
-      const response = await axios.post("http://localhost:5000/api/support/tickets", formData);
+      const response = await axios.post( `${API_URL}/support/tickets`, formData);
       
       setTicketNumber(response.data.ticket.number);
       setShowSuccess(true);
@@ -91,7 +92,6 @@ const Contact = () => {
   return (
     <div className="min-h-screen py-17 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
       <div className="max-w-7xl mx-auto">
-        {/* Success Modal */}
         {showSuccess && (
           <div 
             className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
@@ -130,7 +130,6 @@ const Contact = () => {
           </div>
         )}
 
-        {/* Page Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
             Contact <span className="text-blue-600 dark:text-blue-400">Support</span>
@@ -140,9 +139,7 @@ const Contact = () => {
           </p>
         </div>
 
-        {/* Contact Cards - Redesigned - No Blank Space */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          {/* Email Card - Clickable Email Link */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 hover:shadow-xl transition-all duration-300 group">
             <div className="p-6 text-center">
               <div className="w-16 h-16 mx-auto bg-blue-100 dark:bg-blue-900/40 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -155,7 +152,7 @@ const Contact = () => {
                 href="mailto:support@eduscheduler.com?subject=Support Request&body=Hello, I need help with..."
                 className="text-blue-600 dark:text-blue-400 font-medium mb-2 hover:underline inline-block"
               >
-                support@eduscheduler.com
+                support@eduschedular.com
               </a>
               <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1 mt-2">
                 <i className="fas fa-clock text-gray-400 text-xs"></i>
@@ -164,7 +161,6 @@ const Contact = () => {
             </div>
           </div>
 
-          {/* Phone Card - Clickable Phone Link */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 hover:shadow-xl transition-all duration-300 group">
             <div className="p-6 text-center">
               <div className="w-16 h-16 mx-auto bg-green-100 dark:bg-green-900/40 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -186,7 +182,6 @@ const Contact = () => {
             </div>
           </div>
 
-          {/* Hours Card - Updated to 10AM - 5PM */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 hover:shadow-xl transition-all duration-300 group">
             <div className="p-6 text-center">
               <div className="w-16 h-16 mx-auto bg-purple-100 dark:bg-purple-900/40 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -206,9 +201,7 @@ const Contact = () => {
           </div>
         </div>
 
-        {/* Contact Form Section */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-          {/* Form Header */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-8 text-white">
             <h2 className="text-3xl font-bold mb-2">
               Send Us a Message
@@ -223,7 +216,6 @@ const Contact = () => {
             </div>
           </div>
 
-          {/* Form Body */}
           <div className="p-8">
             {error && (
               <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-3">
@@ -235,7 +227,7 @@ const Contact = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label className="block mb-2 text-sm font-medium text-gray-600 dark:text-gray-300">
                     <i className="fas fa-user mr-2"></i>
                     Your Name <span className="text-red-500">*</span>
                   </label>
@@ -252,7 +244,7 @@ const Contact = () => {
                 </div>
 
                 <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label className="block mb-2 text-sm font-medium text-gray-600 dark:text-gray-300">
                     <i className="fas fa-envelope mr-2"></i>
                     Email Address <span className="text-red-500">*</span>
                   </label>
@@ -271,7 +263,7 @@ const Contact = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label className="block mb-2 text-sm font-medium text-gray-600 dark:text-gray-300">
                     <i className="fas fa-tag mr-2"></i>
                     Subject <span className="text-red-500">*</span>
                   </label>
@@ -288,7 +280,7 @@ const Contact = () => {
                 </div>
 
                 <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label className="block mb-2 text-sm font-medium text-gray-600 dark:text-gray-300">
                     <i className="fas fa-flag mr-2"></i>
                     Priority Level
                   </label>
@@ -308,7 +300,7 @@ const Contact = () => {
               </div>
 
               <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label className="block mb-2 text-sm font-medium text-gray-600 dark:text-gray-300">
                   <i className="fas fa-comment-dots mr-2"></i>
                   Message <span className="text-red-500">*</span>
                 </label>
@@ -329,7 +321,7 @@ const Contact = () => {
                 className={`w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 text-white rounded-xl text-lg font-semibold transition-all duration-300 shadow-lg shadow-blue-600/30 dark:shadow-blue-800/30 ${
                   loading 
                     ? "opacity-60 cursor-not-allowed" 
-                    : "hover:from-blue-700 hover:to-blue-800 dark:hover:from-blue-800 dark:hover:to-blue-900 hover:-translate-y-0.5 hover:shadow-xl"
+                    : "hover:from-blue-700 hover:to-blue-800 dark:hover:from-blue-800"
                 }`}
                 disabled={loading}
               >
