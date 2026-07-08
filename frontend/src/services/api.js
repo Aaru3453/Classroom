@@ -171,16 +171,6 @@ export const leaveAPI = {
 };
 
 
-export const assignmentAPI = {
-  create: (data) => api.post('/assignments', data),
-  getAll: () => api.get('/assignments'),
-  getById: (id) => api.get(`/assignments/${id}`),
-  update: (id, data) => api.put(`/assignments/${id}`, data),
-  delete: (id) => api.delete(`/assignments/${id}`),
-  getByLeaveId: (leaveId) => api.get(`/assignments/leave/${leaveId}`),
-  getByFacultyId: (facultyId) => api.get(`/assignments/faculty/${facultyId}`),
-};
-
 export const dashboardAPI = {
   getDashboard: () => api.get("/dashboard"),
   getStats: () => api.get("/dashboard/stats"),
