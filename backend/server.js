@@ -21,6 +21,7 @@ import supportRoutes from "./routes/supportRoutes.js";
 import notificationRoutes from './routes/notifications.js';
 import noteRoutes from './routes/noteRoutes.js';
 import leaveRoutes from './routes/leaves.js';
+import assignmentRoutes from './routes/assignmentRoutes.js';
 
 dotenv.config({
   path: path.join(process.cwd(), ".env"),
@@ -70,6 +71,7 @@ app.use("/api/support", supportRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/leaves', leaveRoutes);
+app.use('/api/assignments', assignmentRoutes)
 
 app.get("/api/test", (req, res) => {
   res.json({ success: true });
