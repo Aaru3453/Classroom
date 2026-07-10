@@ -27,30 +27,15 @@
 
 
 import dotenv from "dotenv";
-import nodemailer from "nodemailer";
+import SibApiV3Sdk from "sib-api-v3-sdk";
 
 dotenv.config();
 
-const emailPass = process.env.EMAIL_PASSWORD
-  ? process.env.EMAIL_PASSWORD.replace(/\s/g, "")
-  : "";
+const client = SibApiV3Sdk.ApiClient.instance;
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true, // SSL
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: emailPass,
-  },
-});
+const apiKey = client.authentications["api-key"];
+apiKey.apiKey = process.env.BREVO_API_KEY;
 
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("Email transporter error:", error);
-  } else {
-    console.log("Email transporter ready");
-  }
-});
+const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
-export default transporter;
+export default apiInstance;
