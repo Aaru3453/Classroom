@@ -1049,7 +1049,6 @@ const Dashboard = () => {
                 className={`fas fa-sync-alt ${refreshing ? "animate-spin" : ""}`}
               ></i>
               <span className="hidden sm:inline">{refreshing ? "Refreshing..." : "Refresh"}</span>
-              <span className="sm:hidden">{refreshing ? "..." : "↻"}</span>
             </button>
           </div>
         </div>
