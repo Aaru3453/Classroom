@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { dashboardAPI, leaveAPI, facultyAPI, noteAPI } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
@@ -466,10 +465,10 @@ const Dashboard = () => {
             key={leave._id}
             className="border-l-4 border-green-500 bg-green-50 p-3 rounded-r-lg"
           >
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between">
+            <div className="flex items-start justify-between">
               <div className="flex-1">
-                <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-                  <span className="font-semibold text-gray-800 text-sm sm:text-base">
+                <div className="flex items-center space-x-2 flex-wrap gap-1">
+                  <span className="font-semibold text-gray-800">
                     {leave.facultyName}
                   </span>
                   <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs font-medium">
@@ -479,15 +478,15 @@ const Dashboard = () => {
                     Assigned
                   </span>
                 </div>
-                <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                <p className="text-sm text-gray-600 mt-1">
                   {new Date(leave.fromDate).toLocaleDateString()} -{" "}
                   {new Date(leave.toDate).toLocaleDateString()}
                 </p>
-                <p className="text-xs sm:text-sm text-green-700 mt-1">
+                <p className="text-sm text-green-700 mt-1">
                   Replacement: <strong>{leave.replacementFacultyName}</strong>
                 </p>
               </div>
-              <div className="flex flex-col items-start sm:items-end mt-2 sm:mt-0">
+              <div className="flex flex-col items-end">
                 <span className="text-xs text-gray-400">
                   {getDaysRemaining(leave.toDate)} days left
                 </span>
@@ -506,7 +505,7 @@ const Dashboard = () => {
       return (
         <div className="text-center py-6">
           <i className="fas fa-check-circle text-4xl text-green-400 mb-2"></i>
-          <p className="text-gray-600 text-sm sm:text-base">
+          <p className="text-gray-600">
             All faculty members have replacement assigned
           </p>
         </div>
@@ -524,10 +523,10 @@ const Dashboard = () => {
               key={leave._id}
               className={`border-l-4 ${isActive ? "border-red-500" : "border-yellow-500"} ${isActive ? "bg-red-50" : "bg-yellow-50"} p-3 rounded-r-lg`}
             >
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between">
+              <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-                    <span className="font-semibold text-gray-800 text-sm sm:text-base">
+                  <div className="flex items-center space-x-2 flex-wrap gap-1">
+                    <span className="font-semibold text-gray-800">
                       {leave.facultyName}
                     </span>
 
@@ -564,7 +563,7 @@ const Dashboard = () => {
                       e.stopPropagation();
                       openReplacementModal(leave);
                     }}
-                    className="mt-2 px-3 sm:px-4 py-1 sm:py-1.5 bg-purple-600 text-white text-xs sm:text-sm rounded-md hover:bg-purple-700 transition-colors w-full sm:w-auto"
+                    className="mt-2 px-4 py-1.5 bg-purple-600 text-white text-sm rounded-md hover:bg-purple-700 transition-colors"
                   >
                     <i className="fas fa-user-plus mr-1"></i>
                     Assign Replacement
@@ -580,10 +579,10 @@ const Dashboard = () => {
 
   const LeaveAlert = () => (
     <div
-      className="bg-red-50 border border-red-200 rounded-xl p-3 sm:p-4 mb-6 cursor-pointer hover:bg-red-100 transition-colors"
+      className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 cursor-pointer hover:bg-red-100 transition-colors"
       onClick={() => setIsLeaveDropdownOpen(!isLeaveDropdownOpen)}
     >
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+      <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
           <div className="relative">
             <i className="fas fa-bell text-red-500 text-lg"></i>
@@ -591,11 +590,11 @@ const Dashboard = () => {
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
             )}
           </div>
-          <span className="font-medium text-red-700 text-sm sm:text-base">
+          <span className="font-medium text-red-700">
             Leave updates — {leaveData.leavesNeedingReplacement.length} pending
           </span>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+        <div className="flex items-center gap-3">
           <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-medium">
             {leaveData.leavesNeedingReplacement.length} pending
           </span>
@@ -623,7 +622,7 @@ const Dashboard = () => {
                   setShowAssignedLeaves(!showAssignedLeaves);
                 }}
               >
-                <h4 className="font-semibold text-green-600 text-sm sm:text-base">
+                <h4 className="font-semibold text-green-600">
                   Assigned Replacements ({leaveData.assignedCount})
                 </h4>
                 <i
@@ -685,15 +684,15 @@ const Dashboard = () => {
 
   const renderNotesSection = () => {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <div className="rounded-xl border p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
-            <h3 className="font-medium text-gray-600 flex items-center gap-2 text-sm sm:text-base">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className=" rounded-xl border p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-medium text-gray-600 flex items-center gap-2">
               <i className="fas fa-thumbtack text-yellow-500"></i> Admin Notes
             </h3>
             {isAdmin && (
               <button
-                className="text-xs sm:text-sm px-2 sm:px-3 py-1 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors w-full sm:w-auto"
+                className="text-sm px-3 py-1 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
                 onClick={() => setShowAdminInput(!showAdminInput)}
               >
                 <i className="fas fa-plus text-xs mr-1"></i> Add Note
@@ -710,9 +709,9 @@ const Dashboard = () => {
               adminNotes.map((note) => (
                 <div
                   key={note._id || note.id}
-                  className={`border-l-4 ${getColorClass(note.color)} bg-white p-3 rounded-r-md relative group`}
+                  className={`border-l-4 ${getColorClass(note.color)} bg-white-600 p-3 rounded-r-md relative group`}
                 >
-                  <div className="text-sm text-gray-600 pr-8">{note.text}</div>
+                  <div className="text-sm text-gray-600">{note.text}</div>
                   <div className="text-xs text-gray-400 mt-1 flex justify-between">
                     <span>{note.author || 'Admin'} · {note.date || new Date(note.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
                   </div>
@@ -721,7 +720,8 @@ const Dashboard = () => {
                       className="absolute top-2 right-3 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => handleDeleteNote("admin", note._id || note.id)}
                     >
-                      <i className="fas fa-trash"></i>
+                          <i className="fas fa-trash"></i>
+
                     </button>
                   )}
                 </div>
@@ -734,15 +734,15 @@ const Dashboard = () => {
           </div>
 
           {showAdminInput && isAdmin && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="mt-4 pt-4 border-t border-gray-600">
               <textarea
-                className="w-full text-sm p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 resize-none"
+                className="w-full text-sm p-3 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500 resize-none"
                 rows="2"
                 placeholder="Type a note for faculty/staff..."
                 value={adminNoteText}
                 onChange={(e) => setAdminNoteText(e.target.value)}
               ></textarea>
-              <div className="flex flex-wrap items-center gap-3 mt-2">
+              <div className="flex items-center gap-3 mt-2">
                 <div className="flex gap-1">
                   {["blue", "yellow", "green", "red"].map((color) => (
                     <div
@@ -754,7 +754,7 @@ const Dashboard = () => {
                       style={{
                         background:
                           color === "blue"
-                            ? "#2a78d6"
+                            ? "bg-blue-50"
                             : color === "yellow"
                               ? "#eda100"
                               : color === "green"
@@ -793,14 +793,14 @@ const Dashboard = () => {
           )}
         </div>
 
-        <div className="rounded-xl border p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
-            <h3 className="font-medium text-gray-600 flex items-center gap-2 text-sm sm:text-base">
+        <div className="rounded-xl border p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-medium text-gray-600 flex items-center gap-2">
               <i className="fas fa-comment-dots text-blue-500"></i> Faculty Notes
             </h3>
             {isFaculty && (
               <button
-                className="text-xs sm:text-sm px-2 sm:px-3 py-1 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors w-full sm:w-auto"
+                className="text-sm px-3 py-1 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
                 onClick={() => setShowFacultyInput(!showFacultyInput)}
               >
                 <i className="fas fa-plus text-xs mr-1"></i> Add Note
@@ -817,9 +817,10 @@ const Dashboard = () => {
               facultyNotes.map((note) => (
                 <div
                   key={note._id || note.id}
-                  className={`border-l-4 ${getColorClass(note.color)} bg-white p-3 rounded-r-md relative group`}
+                  className={`border-l-4 ${getColorClass(note.color)} bg-white-600 p-3 rounded-r-md relative group`}
+
                 >
-                  <div className="text-sm text-gray-600 pr-8">{note.text}</div>
+                  <div className="text-sm text-gray-600">{note.text}</div>
                   <div className="text-xs text-gray-400 mt-1 flex justify-between">
                     <span>{note.author || 'Faculty'} · {note.date || new Date(note.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
                   </div>
@@ -828,7 +829,8 @@ const Dashboard = () => {
                       className="absolute top-2 right-3 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => handleDeleteNote("faculty", note._id || note.id)}
                     >
-                      <i className="fas fa-trash"></i>
+    <i className="fas fa-trash"></i>
+
                     </button>
                   ) : null}
                 </div>
@@ -849,7 +851,7 @@ const Dashboard = () => {
                 value={facultyNoteText}
                 onChange={(e) => setFacultyNoteText(e.target.value)}
               ></textarea>
-              <div className="flex flex-wrap items-center gap-3 mt-2">
+              <div className="flex items-center gap-3 mt-2">
                 <div className="flex gap-1">
                   {["blue", "yellow", "green", "red"].map((color) => (
                     <div
@@ -924,13 +926,13 @@ const Dashboard = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center max-w-md w-full">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center max-w-md">
           <i className="fas fa-exclamation-triangle text-4xl text-red-500 mb-3"></i>
           <h3 className="text-lg font-semibold text-red-800 mb-2">{error}</h3>
           <button
             onClick={fetchAllData}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 w-full sm:w-auto"
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
           >
             Try Again
           </button>
@@ -1018,17 +1020,12 @@ const Dashboard = () => {
   const maxCount = Math.max(...departmentData.map((d) => d.count), 1);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-8 sm:pb-12">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
-        {/* Header Section */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8 pt-20 sm:pt-24">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center mb-8 pt-24">
           <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-1 sm:mb-2">
-              Dashboard
-            </h1>
-            <p className="text-sm sm:text-base text-gray-600">
-              EduScheduler - PCE
-            </p>
+            <h1 className="text-4xl font-bold text-gray-600 mb-2">Dashboard</h1>
+            <p className="text-lg text-gray-600">EduScheduler - PCE</p>
           </div>
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
             <select
@@ -1053,12 +1050,11 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* KPI Cards - First Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-3 sm:mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           {firstRowKPIs.map((kpi) => (
             <div
               key={kpi.id}
-              className={`bg-white rounded-xl border p-3 sm:p-4 transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:border-blue-400 hover:shadow-md ${selectedKPI === kpi.id
+              className={`bg-white rounded-xl border p-4 transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:border-blue-400 hover:shadow-md ${selectedKPI === kpi.id
                   ? "border-2 border-blue-500 bg-blue-50"
                   : "border-gray-200"
                 }`}
@@ -1067,11 +1063,11 @@ const Dashboard = () => {
               <div className="flex justify-between items-start">
                 <span className="text-xs font-bold text-gray-600">{kpi.label}</span>
                 <i
-                  className={`fas ${kpi.icon} text-base sm:text-lg`}
+                  className={`fas ${kpi.icon} text-lg`}
                   style={{ color: kpi.color }}
                 ></i>
               </div>
-              <div className="text-xl sm:text-2xl font-bold text-gray-800 mt-1">
+              <div className="text-2xl font-bold text-gray-600 mt-1">
                 {kpi.value}
               </div>
               <div className="text-xs text-green-600 mt-1">{kpi.sub}</div>
@@ -1079,12 +1075,11 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* KPI Cards - Second Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {secondRowKPIs.map((kpi) => (
             <div
               key={kpi.id}
-              className={`bg-white rounded-xl border p-3 sm:p-4 transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:border-blue-400 hover:shadow-md ${selectedKPI === kpi.id
+              className={`bg-white rounded-xl border p-4 transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:border-blue-400 hover:shadow-md ${selectedKPI === kpi.id
                   ? "border-2 border-blue-500 bg-blue-50"
                   : "border-gray-200"
                 }`}
@@ -1093,11 +1088,11 @@ const Dashboard = () => {
               <div className="flex justify-between items-start">
                 <span className="text-xs font-bold text-gray-600">{kpi.label}</span>
                 <i
-                  className={`fas ${kpi.icon} text-base sm:text-lg`}
+                  className={`fas ${kpi.icon} text-lg`}
                   style={{ color: kpi.color }}
                 ></i>
               </div>
-              <div className="text-xl sm:text-2xl font-bold text-gray-800 mt-1">
+              <div className="text-2xl font-bold text-gray-600 mt-1">
                 {kpi.value}
               </div>
               <div className="text-xs text-green-600 mt-1">{kpi.sub}</div>
@@ -1107,15 +1102,14 @@ const Dashboard = () => {
 
         <LeaveAlert />
 
-        {/* Charts and Activity Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
-          <div className="bg-white rounded-xl border p-4 sm:p-6">
-            <h3 className="font-medium text-gray-600 mb-4 text-sm sm:text-base">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div className="bg-white rounded-xl border p-6">
+            <h3 className="font-medium text-gray-600 mb-4">
               Faculty by department
             </h3>
             {departmentData.map((dept) => (
-              <div key={dept.dept} className="flex items-center gap-2 sm:gap-3 mb-3">
-                <span className="text-xs sm:text-sm text-gray-600 w-24 sm:w-40 flex-shrink-0 truncate">
+              <div key={dept.dept} className="flex items-center gap-3 mb-3">
+                <span className="text-sm text-gray-600 w-40 flex-shrink-0">
                   {dept.dept}
                 </span>
                 <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -1127,22 +1121,20 @@ const Dashboard = () => {
                     }}
                   ></div>
                 </div>
-                <span className="text-xs sm:text-sm text-gray-400 w-5 sm:w-6 text-right">
+                <span className="text-sm text-gray-400 w-6 text-right">
                   {dept.count}
                 </span>
               </div>
             ))}
           </div>
 
-          <div className="bg-white rounded-xl border p-4 sm:p-6">
-            <h3 className="font-medium text-gray-600 mb-4 text-sm sm:text-base">
-              Recent activity
-            </h3>
-            <div className="flex flex-wrap gap-1 sm:gap-2 mb-4">
+          <div className="bg-white rounded-xl border p-6">
+            <h3 className="font-medium text-gray-600 mb-4">Recent activity</h3>
+            <div className="flex gap-2 mb-4 flex-wrap">
               {["all", "faculty", "batch", "timetable"].map((filter) => (
                 <button
                   key={filter}
-                  className={`text-xs sm:text-sm px-2 sm:px-3 py-1 rounded-full border transition-colors ${activityFilter === filter
+                  className={`text-sm px-3 py-1 rounded-full border transition-colors ${activityFilter === filter
                       ? "bg-blue-600 text-white border-blue-600"
                       : "bg-white text-gray-500 border border-gray-300 hover:bg-gray-50"
                     }`}
@@ -1157,10 +1149,10 @@ const Dashboard = () => {
                 filteredActivities.slice(0, 5).map((activity, index) => (
                   <div
                     key={index}
-                    className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3 py-2 border-b border-gray-100 last:border-0"
+                    className="flex items-start gap-3 py-2 border-b border-gray-100 last:border-0"
                   >
-                    <div className="w-2 h-2 rounded-full mt-1 bg-purple-500 flex-shrink-0"></div>
-                    <div className="flex-1 text-xs sm:text-sm text-gray-600">
+                    <div className="w-2 h-2 rounded-full mt-2 bg-purple-500 flex-shrink-0"></div>
+                    <div className="flex-1 text-sm text-gray-600">
                       {activity.description}
                     </div>
                     <div className="text-xs text-gray-400 whitespace-nowrap">
@@ -1169,7 +1161,7 @@ const Dashboard = () => {
                   </div>
                 ))
               ) : (
-                <p className="text-center text-gray-500 py-8 text-sm">
+                <p className="text-center text-gray-500 py-8">
                   No activities found
                 </p>
               )}
@@ -1180,23 +1172,22 @@ const Dashboard = () => {
         {renderNotesSection()}
       </div>
 
-      {/* Replacement Modal */}
       {isReplacementModalOpen && selectedLeaveForReplacement && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-4 sm:p-6 rounded-t-xl">
-              <h2 className="text-lg sm:text-xl font-bold text-white">
+            <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-6 rounded-t-xl">
+              <h2 className="text-xl font-bold text-white">
                 Assign Replacement Faculty
               </h2>
-              <p className="text-purple-100 text-xs sm:text-sm mt-1">
+              <p className="text-purple-100 text-sm mt-1">
                 Assign a replacement for{" "}
                 {selectedLeaveForReplacement.facultyName}
               </p>
             </div>
 
-            <div className="p-4 sm:p-6">
+            <div className="p-6">
               <div className="space-y-4">
-                <div className="bg-gray-50 p-3 sm:p-4 rounded-lg text-xs sm:text-sm space-y-2">
+                <div className="bg-gray-50 p-4 rounded-lg text-sm space-y-2">
                   <p>
                     <strong>Faculty:</strong>{" "}
                     {selectedLeaveForReplacement.facultyName}
@@ -1226,7 +1217,7 @@ const Dashboard = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-600 mb-2">
                     Select Replacement Faculty *
                   </label>
                   {availableFacultyForReplacement.length > 0 ? (
@@ -1234,15 +1225,15 @@ const Dashboard = () => {
                       {availableFacultyForReplacement.map((faculty) => (
                         <div
                           key={faculty._id}
-                          className={`p-2 sm:p-3 border rounded-lg cursor-pointer transition-colors ${selectedReplacementFaculty?._id === faculty._id
+                          className={`p-3 border rounded-lg cursor-pointer transition-colors ${selectedReplacementFaculty?._id === faculty._id
                               ? "border-purple-500 bg-purple-50"
-                              : "border-gray-200 hover:bg-gray-50"
+                              : "border-gray-200 hover:bg-gray-50/2"
                             }`}
                           onClick={() => setSelectedReplacementFaculty(faculty)}
                         >
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="font-medium text-gray-800 text-sm sm:text-base">
+                              <p className="font-medium text-gray-600">
                                 {faculty.name}
                               </p>
                               <p className="text-xs text-gray-600">
@@ -1251,7 +1242,7 @@ const Dashboard = () => {
                             </div>
                             {selectedReplacementFaculty?._id ===
                               faculty._id && (
-                                <i className="fas fa-check-circle text-purple-500 text-lg sm:text-xl"></i>
+                                <i className="fas fa-check-circle text-purple-500 text-xl"></i>
                               )}
                           </div>
                         </div>
@@ -1259,8 +1250,8 @@ const Dashboard = () => {
                     </div>
                   ) : (
                     <div className="text-center py-6 bg-gray-50 rounded-lg">
-                      <i className="fas fa-user-slash text-3xl sm:text-4xl text-gray-400 mb-2"></i>
-                      <p className="text-gray-500 text-sm">
+                      <i className="fas fa-user-slash text-4xl text-gray-400 mb-2"></i>
+                      <p className="text-gray-500">
                         No available faculty in same department
                       </p>
                     </div>
@@ -1268,8 +1259,8 @@ const Dashboard = () => {
                 </div>
 
                 {selectedReplacementFaculty && (
-                  <div className="bg-green-50 border border-green-200 p-2 sm:p-3 rounded-lg">
-                    <p className="text-xs sm:text-sm font-medium text-green-800">
+                  <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+                    <p className="text-sm font-medium text-green-800">
                       <i className="fas fa-check-circle mr-1"></i>
                       Selected: {selectedReplacementFaculty.name}
                     </p>
@@ -1278,14 +1269,14 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 rounded-b-xl flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+            <div className="bg-gray-50 px-6 py-4 rounded-b-xl flex justify-end gap-3">
               <button
                 onClick={() => {
                   setIsReplacementModalOpen(false);
                   setSelectedLeaveForReplacement(null);
                   setSelectedReplacementFaculty(null);
                 }}
-                className="px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 w-full sm:w-auto"
+                className="px-4 py-2 text-sm text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200"
                 disabled={isSubmitting}
               >
                 Cancel
@@ -1293,7 +1284,7 @@ const Dashboard = () => {
               <button
                 onClick={handleAssignReplacement}
                 disabled={!selectedReplacementFaculty || isSubmitting}
-                className="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 w-full sm:w-auto"
+                className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isSubmitting ? (
                   <>
